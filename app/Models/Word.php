@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Word extends Model
+{
+    protected $fillable = ['term', 'definition', 'note'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function collections()
+    {
+        return $this->belongsToMany(Collection::class);
+    }
+}
