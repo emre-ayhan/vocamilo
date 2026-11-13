@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\StudySessionController;
 use App\Http\Controllers\VocabularyController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/collections/{collection}/words/{word}', [CollectionController::class, 'removeWord']);
     Route::post('/collections/{collection}/sharing', [CollectionController::class, 'share']);
     Route::delete('/collections/{collection}/sharing', [CollectionController::class, 'unshare']);
+    Route::post('/collections/{collection}/sessions', [StudySessionController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/collections/{collection}/sessions/{session}/complete', [StudySessionController::class, 'complete'])->middleware('throttle:60,1');
     Route::get('/collections/{collection}/study', [CollectionController::class, 'study']);
 });
 Route::middleware('throttle:120,1')->group(function () {

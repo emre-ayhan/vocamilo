@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collection;
+use App\Models\StudySession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -25,7 +26,7 @@ class CollectionController extends Controller
     {
         $c = $this->owned($r, $collection);
 
-        return Inertia::render('Collections/Show', ['collection' => $this->payload($c, false), 'shared' => false, 'availableWords' => $r->user()->words()->select('id', 'term', 'definition')->orderBy('term')->get()]);
+        return Inertia::render('Collections/Show', ['collection' => $this->payload($c, false), 'shared' => false, 'summary' => StudySession::summaryFor($c), 'availableWords' => $r->user()->words()->select('id', 'term', 'definition')->orderBy('term')->get()]);
     }
 
     public function update(Request $r, int $collection)

@@ -10,7 +10,7 @@ A multi-user vocabulary workspace built with Laravel 12, Inertia 2 and Vue 3.
 - Collections reuse words without copying them. Pool selection supports selecting all search results, Shift-click ranges and a two-tap range mode for touch screens. Both range endpoints are included; filtering keeps previous selections but resets the range anchor. Clear results affects only matching words; Clear all selections resets everything. Up to 500 words can be added per request; larger selections are rejected without silent truncation, so add them in smaller batches.
 - Flashcards, guided study and tests with configurable question direction, answer type and order.
 - Anyone holding a random UUID share link can study without signing in. Notes are never included in guest payloads. Disabling sharing revokes the link; enabling it again generates a new link.
-- Responsive interface and separate progress in each study session.
+- Responsive interface, saved completed Flashcards/Study/Test results and a private collection summary with mode totals, latest results and recent sessions.
 
 There are no teacher/student roles or school integration in this version. Shared collections are unlisted, not searchable public listings. A UUID is a bearer link: anyone receiving it can access the shared material. Revocation blocks future requests, but cannot erase material someone already viewed/copied.
 
@@ -65,7 +65,7 @@ Choose whether the first row is a header and the term/definition column numbers.
 
 ## Current boundaries
 
-Study results are for practice, not proctored assessment. Written answers use deterministic normalization rather than AI semantic grading; definition practice may require self-assessment. Refreshing a session may reset progress. Cross-device history, spaced repetition scheduling, password-reset email, email verification, account export/deletion UI, media uploads, public discovery, collaborative editing and Cepidia OIDC integration are future work. The application has not been deployed to a production host.
+Study results are for practice, not proctored assessment. Written answers use deterministic normalization rather than AI semantic grading; definition practice may require self-assessment. Completed owner sessions are saved; incomplete sessions cannot be resumed. Spaced repetition scheduling, password-reset email, email verification, account export/deletion UI, media uploads, public discovery, collaborative editing and Cepidia OIDC integration are future work. The application has not been deployed to a production host.
 
 ## Google sign-in setup
 
@@ -84,3 +84,13 @@ New Google accounts require a verified email claim. Local `email_verified_at` is
 Google-only registrations receive a random, unknown password hash rather than a reusable default password. They must continue using Google until a separate password-setting/recovery feature is implemented. Do not remove the `google_id` migration while Google-only accounts depend on it. Google configuration and live provider acceptance must be tested by the deployer; mocked automated tests are not proof of a real OAuth round trip.
 
 References: [Laravel Socialite](https://laravel.com/docs/12.x/socialite), [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect), [Google email authority guidance](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
+
+## Saved practice history
+
+Authenticated collection owners start a server-backed session. Completion saves each answer and a question snapshot, with server-calculated scores. Flashcards are self-assessed known/still-learning marks, not test scores. Study allows an explicit self-assessment override for written definitions; Test does not. A completed session can be retried safely without duplicate history. Retry practice is a separate session. Maximum session size is 2,000 cards/questions.
+
+The collection page shows private mode totals, latest results, best Test percentage, and ten recent completions. A deleted/edited word does not rewrite historical answers. Deleting a collection or account deletes its history. Private word notes are not copied to history. Started but unfinished sessions have a private question snapshot but no completed result and are excluded from the summary; resume and automated cleanup are not implemented.
+
+Shared-link practice remains temporary, including for signed-in visitors using that link. No visitor results are saved to the collection owner and no owner history is included in public responses. A save error is shown with a retry button; do not close the results page before it reports saved.
+
+Existing installations: back up the database, pull the update, run `php artisan migrate --force`, then `npm ci` and `npm run build`. No queue worker or new environment settings are required. Rolling back the history migration deletes saved practice records.
