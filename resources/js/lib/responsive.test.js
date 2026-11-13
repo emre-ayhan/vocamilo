@@ -28,9 +28,10 @@ test('tablet practice cards use two columns and desktop uses three', () => {
     for (const width of [761, 820, 1024]) for (const selector of ['.mode-grid', '.stats-grid']) assert.equal(columns(selector, width), 'repeat(2,minmax(0,1fr))');
     assert.equal(columns('.mode-grid', 1025), 'repeat(3,1fr)');
 });
-test('one language switch belongs to the sidebar brand, not the page action header', () => {
+test('one compact language switch precedes the sidebar footer and moves opposite the mobile brand', () => {
     const layout = readFileSync(new URL('../Layouts/AppLayout.vue', import.meta.url), 'utf8');
     assert.equal((layout.match(/<LanguageSwitch\s*\/>/g) || []).length, 1);
-    assert.match(layout, /class="sidebar-brand"[\s\S]*?<LanguageSwitch\/>\s*<\/div>/);
+    assert.match(layout, /class="sidebar-bottom"><div class="sidebar-language"><LanguageSwitch\/><\/div><div class="small-label">/);
+    assert.match(layout, /sidebar-language\{position:absolute;top:18px;right:20px/);
     assert.doesNotMatch(layout, /class="header-actions"><LanguageSwitch/);
 });
