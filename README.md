@@ -7,7 +7,7 @@ A multi-user vocabulary workspace built with Laravel 12, Inertia 2 and Vue 3.
 - Register/sign in with email/password or optional Google OAuth; each member owns a private vocabulary pool.
 - UTF-8 CSV preview, zero-based column mapping, duplicate detection and import into a collection.
 - Personal notes alongside original terms and definitions.
-- Collections reuse words without copying them.
+- Collections reuse words without copying them. Pool selection supports selecting all search results, Shift-click ranges and a two-tap range mode for touch screens. Both range endpoints are included; filtering keeps previous selections but resets the range anchor. Clear results affects only matching words; Clear all selections resets everything. Up to 500 words can be added per request; larger selections are rejected without silent truncation, so add them in smaller batches.
 - Flashcards, guided study and tests with configurable question direction, answer type and order.
 - Anyone holding a random UUID share link can study without signing in. Notes are never included in guest payloads. Disabling sharing revokes the link; enabling it again generates a new link.
 - Responsive interface and separate progress in each study session.
