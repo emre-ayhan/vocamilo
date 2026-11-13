@@ -2,12 +2,18 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CollectionController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\VocabularyController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect(auth()->check() ? '/dashboard' : '/login'));
 Route::middleware('guest')->group(function () {
+    Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->middleware('throttle:10,1');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:10,1');
+    Route::get('/auth/google/link', [GoogleAuthController::class, 'linkForm']);
+    Route::post('/auth/google/link', [GoogleAuthController::class, 'link'])->middleware('throttle:5,1');
+    Route::post('/auth/google/link/cancel', [GoogleAuthController::class, 'cancel']);
     Route::get('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/login', [AuthController::class, 'authenticate'])->middleware('throttle:5,1');
     Route::get('/register', [AuthController::class, 'register']);
@@ -36,5 +42,5 @@ Route::middleware('auth')->group(function () {
 });
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/s/{uuid}', [CollectionController::class, 'publicShow']);
-    Route::get('/s/{uuid}/study',[CollectionController::class, 'publicStudy']);
+    Route::get('/s/{uuid}/study', [CollectionController::class, 'publicStudy']);
 });

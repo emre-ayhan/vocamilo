@@ -68,7 +68,7 @@ class CollectionController extends Controller
             $c->save();
         }
 
-return back()->with('success', 'Anyone with this link can study this collection. Personal notes stay private.');
+        return back()->with('success', 'Anyone with this link can study this collection. Personal notes stay private.');
     }
 
     public function unshare(Request $r, int $collection)
@@ -125,6 +125,6 @@ return back()->with('success', 'Anyone with this link can study this collection.
 
     private function payload(Collection $c, bool $public): array
     {
-        return ['id' => $public ? null : $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words' => $c->words()->get()->map(fn ($w) => $public ? $w->only('id','term','definition') : $w->only('id','term','definition','note'))->values()];
+        return ['id' => $public ? null : $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words' => $c->words()->get()->map(fn ($w) => $public ? $w->only('id', 'term', 'definition') : $w->only('id', 'term', 'definition', 'note'))->values()];
     }
 }

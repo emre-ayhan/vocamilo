@@ -50,6 +50,6 @@ class ImportController extends Controller
         });
         $r->session()->forget('csv_preview');
 
-        return redirect($c ? '/collections/'.$c->id : '/words')->with('success','CSV import completed.');
+        return redirect($c ? '/collections/'.$c->id : '/words')->with('success', 'CSV import completed.');
     }
 }

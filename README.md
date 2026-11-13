@@ -4,7 +4,7 @@ A multi-user vocabulary workspace built with Laravel 12, Inertia 2 and Vue 3.
 
 ## First version
 
-- Register/sign in; each member owns a private vocabulary pool.
+- Register/sign in with email/password or optional Google OAuth; each member owns a private vocabulary pool.
 - UTF-8 CSV preview, zero-based column mapping, duplicate detection and import into a collection.
 - Personal notes alongside original terms and definitions.
 - Collections reuse words without copying them.
@@ -66,3 +66,21 @@ Choose whether the first row is a header and the term/definition column numbers.
 ## Current boundaries
 
 Study results are for practice, not proctored assessment. Written answers use deterministic normalization rather than AI semantic grading; definition practice may require self-assessment. Refreshing a session may reset progress. Cross-device history, spaced repetition scheduling, password-reset email, email verification, account export/deletion UI, media uploads, public discovery, collaborative editing and Cepidia OIDC integration are future work. The application has not been deployed to a production host.
+
+## Google sign-in setup
+
+Google sign-in is optional. Buttons appear only when all three settings below are present. Existing email/password login remains available.
+
+1. In Google Cloud Console, configure the OAuth consent screen for Vocamilo and create an OAuth client of type **Web application**. This is a separate administrator setup; the repository does not provision it.
+2. Add the exact authorized redirect URI, e.g. `https://your-domain.example/auth/google/callback`. For local testing use your exact localhost URL and port. Google requires redirect URI matching; use HTTPS for deployment.
+3. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `GOOGLE_REDIRECT_URI` in the server's private `.env`. Never paste the secret into source control, public issues or chat.
+4. Run `composer install`, `php artisan migrate`, `npm ci`, `npm run build`, and refresh Laravel's configuration cache according to your deployment process. The migration adds a nullable unique Google identifier to users.
+5. If the consent screen is in testing mode, configure permitted test users in Google Cloud. Verify login, registration, cancellation and linking on the intended HTTPS domain before enabling it for everyone.
+
+The application requests only `openid`, `email`, and `profile`. It does not store Google access/refresh tokens or retrieve avatars. Sign-in uses Socialite's session-state checked authorization-code flow with PKCE. Returning users are identified by Google's immutable subject, not by changeable email addresses. Their local email is not silently changed.
+
+New Google accounts require a verified email claim. Local `email_verified_at` is populated only for Gmail or Google Workspace-hosted identities, where Google is authoritative; third-party Google-account addresses remain locally unverified. If the email already belongs to a Vocamilo account, its existing password must be confirmed in a short-lived, session-bound linking screen. Email equality alone never links accounts. Conflicts and cancelled/expired attempts leave existing accounts unchanged.
+
+Google-only registrations receive a random, unknown password hash rather than a reusable default password. They must continue using Google until a separate password-setting/recovery feature is implemented. Do not remove the `google_id` migration while Google-only accounts depend on it. Google configuration and live provider acceptance must be tested by the deployer; mocked automated tests are not proof of a real OAuth round trip.
+
+References: [Laravel Socialite](https://laravel.com/docs/12.x/socialite), [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect), [Google email authority guidance](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
