@@ -27,9 +27,9 @@ class StudySession extends Model
         return ['id' => $this->id, 'mode' => $this->mode, 'practice_round' => $this->practice_round, 'completed_at' => $this->completed_at?->toIso8601String(), 'total' => $this->total_count, 'correct' => $this->correct_count, 'incorrect' => $this->total_count - ($this->correct_count ?? 0), 'percent' => $this->total_count ? (int) round(($this->correct_count ?? 0) / $this->total_count * 100) : 0, 'self_assessed' => $this->self_assessed_count];
     }
 
-    public static function summaryFor(Collection $collection): array
+    public static function summaryFor(Collection $collection, ?int $learnerId = null): array
     {
-        $query = self::where('collection_id', $collection->id)->where('user_id', $collection->user_id)->whereNotNull('completed_at');
+        $query = self::where('collection_id', $collection->id)->where('user_id', $learnerId ?? $collection->user_id)->whereNotNull('completed_at');
         $modes = [];
         foreach (['flashcards', 'study', 'test'] as $mode) {
             $q = (clone $query)->where('mode', $mode);

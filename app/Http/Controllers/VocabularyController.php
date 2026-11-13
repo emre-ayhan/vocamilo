@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Collection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -9,7 +10,9 @@ class VocabularyController extends Controller
 {
     public function dashboard(Request $r)
     {
-        return Inertia::render('Dashboard', ['stats' => ['words' => $r->user()->words()->count(), 'collections' => $r->user()->collections()->count(), 'shared' => $r->user()->collections()->whereNotNull('share_uuid')->count()], 'collections' => $r->user()->collections()->withCount('words')->latest()->take(6)->get(), 'recentWords' => $r->user()->words()->latest()->take(5)->get()]);
+        $accessible = Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))));
+
+        return Inertia::render('Dashboard', ['stats' => ['words' => $r->user()->words()->count(), 'collections' => (clone $accessible)->count(), 'shared' => $r->user()->collections()->whereNotNull('share_uuid')->count(), 'joined' => Collection::whereNotNull('share_uuid')->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))->count()], 'collections' => (clone $accessible)->withCount('words')->latest()->take(6)->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id]), 'recentWords' => $r->user()->words()->latest()->take(5)->get()]);
     }
 
     public function index(Request $r)
@@ -23,21 +26,21 @@ class VocabularyController extends Controller
     {
         $r->user()->words()->create($this->data($r));
 
-        return back()->with('success', 'Word added to your pool.');
+        return back()->with('success', __('Word added to your pool.'));
     }
 
     public function update(Request $r, int $word)
     {
         $r->user()->words()->findOrFail($word)->update($this->data($r));
 
-        return back()->with('success', 'Word updated.');
+        return back()->with('success', __('Word updated.'));
     }
 
     public function destroy(Request $r, int $word)
     {
         $r->user()->words()->findOrFail($word)->delete();
 
-        return back()->with('success', 'Word removed from your pool and collections.');
+        return back()->with('success', __('Word removed from your pool and collections.'));
     }
 
     private function data(Request $r): array

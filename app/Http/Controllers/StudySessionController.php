@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Collection;
 use App\Models\StudySession;
 use App\Models\Word;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class StudySessionController extends Controller
 
     public function store(Request $r, int $collection)
     {
-        $c = $r->user()->collections()->findOrFail($collection);
+        $c = Collection::accessibleTo($r->user()->id, $collection);
         $d = $r->validate([
             'mode' => 'required|in:flashcards,study,test',
             'settings' => 'required|array:type,direction,order,count',
@@ -49,14 +50,15 @@ class StudySessionController extends Controller
         })->values()->all();
         $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions)]);
         // Notes may be displayed privately, but are not copied into historical data.
-        $display = array_map(fn ($q) => $q + ['note' => $words->firstWhere('id', $q['id'])?->note], $questions);
+        $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $r->user()->id)->pluck('note', 'word_id');
+        $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
 
         return response()->json(['id' => $session->id, 'questions' => $display], 201);
     }
 
     public function complete(Request $r, int $collection, string $session)
     {
-        $c = $r->user()->collections()->findOrFail($collection);
+        $c = Collection::accessibleTo($r->user()->id, $collection);
 
         return DB::transaction(function () use ($r, $c, $session) {
             $s = StudySession::whereKey($session)->where('collection_id', $c->id)->where('user_id', $r->user()->id)->lockForUpdate()->firstOrFail();
@@ -67,7 +69,7 @@ class StudySessionController extends Controller
             $byId = collect($d['answers'])->keyBy('word_id');
             $correct = 0;
             $assessed = 0;
-            $existingIds = Word::where('user_id', $r->user()->id)->whereIn('id', array_column($s->questions, 'id'))->pluck('id')->all();
+            $existingIds = Word::whereIn('id', array_column($s->questions, 'id'))->pluck('id')->all();
             foreach ($s->questions as $i => $q) {
                 $a = $byId->get($q['id']);
                 if (! $a) {

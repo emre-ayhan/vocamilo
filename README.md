@@ -9,14 +9,14 @@ A multi-user vocabulary workspace built with Laravel 12, Inertia 2 and Vue 3.
 - Personal notes alongside original terms and definitions.
 - Collections reuse words without copying them. Pool selection supports selecting all search results, Shift-click ranges and a two-tap range mode for touch screens. Both range endpoints are included; filtering keeps previous selections but resets the range anchor. Clear results affects only matching words; Clear all selections resets everything. Up to 500 words can be added per request; larger selections are rejected without silent truncation, so add them in smaller batches.
 - Flashcards, guided study and tests with configurable question direction, answer type and order.
-- Anyone holding a random UUID share link can study without signing in. Notes are never included in guest payloads. Disabling sharing revokes the link; enabling it again generates a new link.
+- Anyone holding a random UUID share link can study without signing in. Notes are never included in guest payloads. Disabling sharing revokes the link and existing memberships; enabling it again generates a new link without reactivating old memberships.
 - Responsive interface, saved completed Flashcards/Study/Test results and a private collection summary with mode totals, latest results and recent sessions.
 
 There are no teacher/student roles or school integration in this version. Shared collections are unlisted, not searchable public listings. A UUID is a bearer link: anyone receiving it can access the shared material. Revocation blocks future requests, but cannot erase material someone already viewed/copied.
 
 ## Requirements
 
-PHP 8.2+, Composer 2, Node 20.19+ or 22.12+, npm, SQLite (development) or a Laravel-supported database. PHP needs PDO, SQLite for tests, mbstring, XML, cURL and standard Laravel extensions.
+PHP 8.4.1+ for the committed dependency lockfile, Composer 2, Node 20.19+ or 22.12+, npm, SQLite (development) or a Laravel-supported database. PHP needs PDO, SQLite for tests, mbstring, XML, cURL and standard Laravel extensions.
 
 ## Local setup
 
@@ -91,6 +91,18 @@ Authenticated collection owners start a server-backed session. Completion saves 
 
 The collection page shows private mode totals, latest results, best Test percentage, and ten recent completions. A deleted/edited word does not rewrite historical answers. Deleting a collection or account deletes its history. Private word notes are not copied to history. Started but unfinished sessions have a private question snapshot but no completed result and are excluded from the summary; resume and automated cleanup are not implemented.
 
-Shared-link practice remains temporary, including for signed-in visitors using that link. No visitor results are saved to the collection owner and no owner history is included in public responses. A save error is shown with a retry button; do not close the results page before it reports saved.
+Shared-link practice remains temporary, including for signed-in visitors using that link. Add the collection to your account to save future sessions as a member. Each member has private notes and practice history; no visitor results are saved to the collection owner and no owner history is included in public responses. A save error is shown with a retry button; do not close the results page before it reports saved.
 
 Existing installations: back up the database, pull the update, run `php artisan migrate --force`, then `npm ci` and `npm run build`. No queue worker or new environment settings are required. Rolling back the history migration deletes saved practice records.
+
+## Shared memberships, language and exports
+
+A public UUID link still permits guest preview and practice. “Add to my collections” requires authentication and links the original collection, not a duplicate. Email login, registration and Google login resume an explicit join request after validating the link again. Owner edits propagate to members; only the owner may edit words, manage sharing or delete the collection. Members have separate private collection notes and practice results. Sharing revocation removes memberships; re-enabling does not revive access. A person may deliberately join again with the new link. Revocation cannot retract material already viewed or exported.
+
+Collection pages load the newest 15 attached words and fetch more with a server cursor. Full practice and CSV exports still include all collection words. New attachments have an added-at timestamp; pre-upgrade attachments use a deterministic word-ID fallback because their original attachment dates were not recorded.
+
+The header EN | PT switch uses European Portuguese for interface text, not user-authored vocabulary. Signed-in language preference is stored in `users.locale` for use across devices. Guests use a one-year cookie. New registrations inherit their current language. Existing accounts without a saved preference use the browser cookie until selecting a language.
+
+Authenticated users can export their own pool or an accessible collection as UTF-8 CSV with `term,definition,note` columns. Collection exports contain only the requesting learner's notes. Spreadsheet-dangerous cells are prefixed with an apostrophe for safety, which may remain visible when imported into other software. Exports are private downloads, never public stored files. The sidebar Import item is removed; Import CSV remains available from the word pool.
+
+Upgrade: back up the database, pull this version, run `php artisan migrate --force`, rebuild assets with `npm run build`, and clear compiled views/config according to your deployment process. This version adds collection memberships/private notes, attachment ordering and a nullable user locale. No worker or new credentials are needed. Rolling back these migrations removes memberships, private member notes and locale preferences.

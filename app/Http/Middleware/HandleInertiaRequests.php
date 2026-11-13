@@ -22,6 +22,6 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
-        return [...parent::share($request), 'auth' => ['user' => $request->user()?->only('id', 'name', 'email')], 'flash' => ['success' => fn () => $request->session()->get('success')]];
+        return [...parent::share($request), 'locale' => app()->getLocale(), 'auth' => ['user' => $request->user()?->only('id', 'name', 'email')], 'flash' => ['success' => fn () => __($request->session()->get('success') ?? '')]];
     }
 }

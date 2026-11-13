@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\CollectionAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
@@ -27,10 +28,12 @@ class AuthController extends Controller
         $d = $r->validate(['name' => 'required|string|max:100', 'email' => 'required|email|max:255|unique:users,email', 'password' => ['required', 'confirmed', Password::min(10)]]);
         $d['email'] = mb_strtolower($d['email']);
         $user = User::create($d);
+        $user->locale = app()->getLocale();
+        $user->save();
         Auth::login($user);
         $r->session()->regenerate();
 
-        return redirect('/dashboard');
+        return CollectionAccess::finishPendingJoin($r) ?? redirect('/dashboard');
     }
 
     public function authenticate(Request $r)
@@ -42,7 +45,7 @@ class AuthController extends Controller
         }
         $r->session()->regenerate();
 
-        return redirect()->intended('/dashboard');
+        return CollectionAccess::finishPendingJoin($r) ?? redirect()->intended('/dashboard');
     }
 
     public function logout(Request $r)

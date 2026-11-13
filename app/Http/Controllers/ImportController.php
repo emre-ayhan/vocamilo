@@ -44,12 +44,14 @@ class ImportController extends Controller
             foreach ($preview['rows'] as $row) {
                 $word = $r->user()->words()->firstOrCreate($row);
                 if ($c) {
-                    $c->words()->syncWithoutDetaching([$word->id]);
+                    if (! $c->words()->where('words.id', $word->id)->exists()) {
+                        $c->words()->attach($word->id, ['added_at' => now()]);
+                    }
                 }
             }
         });
         $r->session()->forget('csv_preview');
 
-        return redirect($c ? '/collections/'.$c->id : '/words')->with('success', 'CSV import completed.');
+        return redirect($c ? '/collections/'.$c->id : '/words')->with('success', __('CSV import completed.'));
     }
 }

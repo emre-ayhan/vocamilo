@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\CollectionAccess;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -76,6 +77,7 @@ class GoogleAuthController extends Controller
             $user = DB::transaction(function () use ($identity) {
                 $user = new User(['name' => $identity['name'], 'email' => $identity['email'], 'password' => Str::random(64)]);
                 $user->google_id = $identity['sub'];
+                $user->locale = app()->getLocale();
                 $user->email_verified_at = $identity['authoritative'] ? now() : null;
                 $user->save();
 
@@ -155,7 +157,7 @@ class GoogleAuthController extends Controller
         $r->session()->forget('google_link');
         $r->session()->regenerate();
 
-        return redirect('/dashboard');
+        return CollectionAccess::finishPendingJoin($r) ?? redirect('/dashboard');
     }
 
     private function error(string $message)
