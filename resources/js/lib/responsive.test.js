@@ -32,7 +32,7 @@ test('one compact language switch sits directly before Sign out and moves opposi
     const layout = readFileSync(new URL('../Layouts/AppLayout.vue', import.meta.url), 'utf8');
     assert.equal((layout.match(/<LanguageSwitch\s*\/>/g) || []).length, 1);
     assert.match(layout, /<\/p><div class="sidebar-language"><LanguageSwitch\/><\/div><Link v-if="page.props.auth\?\.user" href="\/logout"/);
-    assert.match(layout, /class="sidebar-bottom"><div class="small-label">/);
+    assert.match(layout, /class="sidebar-bottom"><InstallApp\/><div class="small-label">/);
     assert.match(layout, /sidebar-language\{position:absolute;top:18px;right:20px/);
     assert.doesNotMatch(layout, /class="header-actions"><LanguageSwitch/);
 });

@@ -18,3 +18,10 @@ test('manifest has standalone same-origin identity and required icon dimensions'
     for(const size of [192,512]){const icon=manifest.icons.find(i=>i.sizes===`${size}x${size}`&&i.purpose==='any');assert.ok(icon);const png=readFileSync(new URL('../../../public'+icon.src,import.meta.url));assert.equal(png.readUInt32BE(16),size);assert.equal(png.readUInt32BE(20),size);}
     assert.ok(manifest.icons.some(i=>i.purpose==='maskable'));
 });
+
+test('install button fills sidebar width immediately before footer heading',()=>{
+    const layout=readFileSync(new URL('../Layouts/AppLayout.vue',import.meta.url),'utf8');
+    const component=readFileSync(new URL('../Components/InstallApp.vue',import.meta.url),'utf8');
+    assert.match(layout,/class="sidebar-bottom"><InstallApp\/><div class="small-label">/);
+    assert.match(component,/\.install-app \.button\{width:100%/);
+});

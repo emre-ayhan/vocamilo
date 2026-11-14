@@ -15,7 +15,11 @@ test('Study UI defaults off and keeps speech controls above active questions',as
  assert.match(source,/speechEnabled=ref\(false\)/);
  assert.match(source,/v-if="mode==='study'&&words.length"/);
  assert.ok(source.indexOf('id="speech-title"')<source.indexOf('class="panel question-panel"'));
- assert.match(source,/role="switch" :disabled="!speechAvailable\|\|!voiceURI"/);
+ assert.match(source,/role="switch" :aria-checked="speechEnabled" :disabled="!speechAvailable"/);
+ assert.match(source,/v-if="speechEnabled&&speechAvailable"/);
+ assert.match(source,/select v-model="voiceURI" required aria-required="true"/);
+ assert.match(source,/speechEnabled.value&&voiceURI.value/);
+ assert.match(source,/speech-toggle input:focus-visible/);
  assert.match(source,/watch\(\[index,started,finished,questions\],\(\)=>\{speech.cancel\(\);speakQuestion\(\);\}\)/);
  assert.match(source,/current.value.type\)\)check\(\);speak\(value\)/);
  assert.match(source,/removeEventListener\('voiceschanged',refreshVoices\);speech.dispose\(\)/);

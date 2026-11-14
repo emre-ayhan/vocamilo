@@ -376,5 +376,6 @@
   "Choose one of the offered answers.": "Escolha uma das respostas apresentadas.",
   "Unexpected extra attempt.": "Tentativa adicional inesperada.",
   "Follow the session question and retry order.": "Siga a ordem das perguntas e repetições da sessão.",
-  "Finish all questions and required retries before saving.": "Conclua todas as perguntas e repetições necessárias antes de guardar."
+  "Finish all questions and required retries before saving.": "Conclua todas as perguntas e repetições necessárias antes de guardar.",
+  "Choose a local voice to start reading aloud.": "Escolha uma voz local para começar a leitura em voz alta."
 }
