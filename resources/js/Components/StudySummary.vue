@@ -8,7 +8,7 @@ function date(value) { return value ? new Date(value).toLocaleString(locale.valu
 function outcome(session) { return session ? `${session.correct} / ${session.total} ${session.mode === 'flashcards' ? t('marked known') : t('correct')}${session.mode === 'test' ? ` · ${session.percent}%` : ''}` : t('No completed sessions'); }
 </script>
 <template>
-    <section class="panel study-history">
+    <section class="study-history">
         <div class="section-heading"><div><span class="eyebrow">{{t("YOUR PRIVATE PROGRESS")}}</span><h2>{{t("Practice summary")}}</h2></div><span class="pill">{{ summary.total_sessions }} {{t('completed sessions')}}</span></div>
         <div class="mode-grid">
             <article v-for="(label, mode) in labels" :key="mode" class="history-mode" :class="`history-mode--${mode}`">

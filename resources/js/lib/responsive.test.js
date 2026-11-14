@@ -56,6 +56,8 @@ test('progress summary replaces recent rows with aggregate counts and preserves 
  const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
  assert.doesNotMatch(summary,/Recent sessions|v-for="session in summary.recent"/);
  assert.match(summary,/completion-summary/);
+ assert.match(summary,/<section class="study-history">/);
+ assert.doesNotMatch(summary,/class="panel study-history"/);
  assert.match(summary,/summary.total_sessions/);
  assert.match(summary,/summary.modes\[mode\]\?\.count/);
  assert.match(summary,/class="button history-start"/);
