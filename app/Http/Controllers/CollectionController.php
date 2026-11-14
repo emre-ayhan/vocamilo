@@ -207,11 +207,24 @@ class CollectionController extends Controller
         return back()->with('success', __('Account unblocked. They can join again using the link.'));
     }
 
+    public function sharingMembers(Request $r, int $collection)
+    {
+        $c = $this->owned($r, $collection);
+        $filters = $r->validate(['q' => 'nullable|string|max:100', 'participants_page' => 'nullable|integer|min:1', 'blocked_page' => 'nullable|integer|min:1']);
+        $search = trim($filters['q'] ?? '');
+        $participants = $c->members()->when($search !== '', fn ($q) => $q->where('users.name', 'like', '%'.$search.'%'))
+            ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'], 'participants_page')->withQueryString()
+            ->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'joined_at' => $u->pivot->created_at?->toIso8601String()]);
+        $blocked = $c->blockedUsers()->when($search !== '', fn ($q) => $q->where('users.name', 'like', '%'.$search.'%'))
+            ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'], 'blocked_page')->withQueryString()
+            ->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'blocked_at' => $u->pivot->created_at?->toIso8601String()]);
+
+        return Inertia::render('Collections/Members', ['collection' => $c->only('id', 'title', 'share_uuid'), 'sharing' => $this->sharingData($c), 'participants' => $participants, 'blocked' => $blocked, 'filters' => ['q' => $search]]);
+    }
+
     private function sharingData(Collection $c): array
     {
-        return ['access' => $c->share_access,
-            'participants' => $c->members()->get(['users.id', 'users.name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'joined_at' => $u->pivot->created_at?->toIso8601String()])->all(),
-            'blocked' => $c->blockedUsers()->get(['users.id', 'users.name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'blocked_at' => $u->pivot->created_at?->toIso8601String()])->all()];
+        return ['access' => $c->share_access, 'participants_count' => $c->members()->count(), 'blocked_count' => $c->blockedUsers()->count()];
     }
 
     public function publicShow(string $uuid)

@@ -81,6 +81,6 @@ class TestRetryTest extends TestCase
     {
         [$c,$s] = $this->start();
         StudySession::findOrFail($s['id'])->update(['rules_version' => 1]);
-        $this->complete($c,$s,[['word_id' => $s['questions'][0]['id'], 'answer' => 'wrong']])->assertOk()->assertJsonPath('session.correct',0)->assertJsonPath('session.total_attempts',1);
+        $this->complete($c, $s, [['word_id' => $s['questions'][0]['id'], 'answer' => 'wrong']])->assertOk()->assertJsonPath('session.correct', 0)->assertJsonPath('session.total_attempts', 1);
     }
 }

@@ -84,7 +84,7 @@ class PrivateWordNoteTest extends TestCase
         $migration->up();
         $this->assertDatabaseHas('user_word_notes', ['user_id' => $member->id, 'word_id' => $w->id, 'note' => 'newer']);
         $this->assertDatabaseHas('user_word_notes', ['user_id' => $other->id, 'word_id' => $w->id, 'note' => null]);
-        $this->assertDatabaseCount('collection_notes',4);
-        $this->assertDatabaseCount('user_word_notes',2);
+        $this->assertDatabaseCount('collection_notes', 4);
+        $this->assertDatabaseCount('user_word_notes', 2);
     }
 }

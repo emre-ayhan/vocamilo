@@ -92,7 +92,7 @@ class SharingControlsTest extends TestCase
     public function test_management_is_owner_only_and_participant_details_do_not_leak(): void
     {
         [$owner, $member, $c] = $this->fixture();
-        $this->actingAs($owner)->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->where('sharing.access', 'guests')->where('sharing.participants.0.id', $member->id)->missing('sharing.participants.0.email'));
+        $this->actingAs($owner)->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->where('sharing.access', 'guests')->where('sharing.participants_count', 1)->missing('sharing.participants')->missing('sharing.blocked'));
         $this->actingAs($member)->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->missing('sharing'));
         $this->put('/collections/'.$c->id.'/sharing/access', ['access' => 'signed_in'])->assertNotFound();
         $this->post('/collections/'.$c->id.'/sharing/rotate')->assertNotFound();

@@ -444,5 +444,14 @@ export default {
   "Member removed. They can join again using the link.": "Membro removido. Pode voltar a aderir através do link.",
   "Sharing access updated.": "Acesso de partilha atualizado.",
   "Sharing link replaced. Existing members keep access.": "Link de partilha substituído. Os membros atuais mantêm o acesso.",
-  "Sharing enabled. Personal notes stay private.": "Partilha ativada. As notas pessoais permanecem privadas."
+  "Sharing enabled. Personal notes stay private.": "Partilha ativada. As notas pessoais permanecem privadas.",
+  "Manage members": "Gerir membros",
+  "Search accounts by name": "Pesquisar contas pelo nome",
+  "Enter a name": "Introduza um nome",
+  "Clear search": "Limpar pesquisa",
+  "No accounts match your search.": "Nenhuma conta corresponde à pesquisa.",
+  "No blocked accounts.": "Não há contas bloqueadas.",
+  "Joined accounts pages": "Páginas de contas participantes",
+  "Blocked accounts pages": "Páginas de contas bloqueadas",
+  "Page {page} of {total}": "Página {page} de {total}"
 };

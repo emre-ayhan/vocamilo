@@ -36,10 +36,10 @@ class SharedAccessAuditTest extends TestCase
         foreach (['flashcards', 'study', 'test'] as $mode) {
             $this->get('/s/'.$collection->share_uuid.'/study?mode='.$mode)
                 ->assertOk()->assertInertia(fn (Assert $page) => $page
-                    ->where('shared', true)->where('auth.user', null)
-                    ->where('collection.id', null)->where('mode', $mode)
-                    ->missing('words.0.note')->missing('collection.words.0.note')
-                    ->missing('summary')->missing('results'))
+                ->where('shared', true)->where('auth.user', null)
+                ->where('collection.id', null)->where('mode', $mode)
+                ->missing('words.0.note')->missing('collection.words.0.note')
+                ->missing('summary')->missing('results'))
                 ->assertDontSee('OWNER_PRIVATE_NOTE')->assertDontSee($owner->email);
             $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode])->assertUnauthorized();
         }

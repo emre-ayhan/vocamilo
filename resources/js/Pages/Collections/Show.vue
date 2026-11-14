@@ -14,7 +14,7 @@ import Errors from '../../Components/Errors.vue';
 const { t } = useI18n();
 const page = usePage();
 const props = defineProps({
-    sharing: { type: Object, default: () => ({access:'guests',participants:[],blocked:[]}) },
+    sharing: { type: Object, default: () => ({access:'guests',participants_count:0,blocked_count:0}) },
     collection: Object, shared: { type: Boolean, default: false }, isOwner: { type: Boolean, default: false },
     availableWords: { type: Array, default: () => [] }, next_cursor: { type: String, default: null },
     summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) },
@@ -85,15 +85,6 @@ function toggleSharing(event){
 function rotateLink(){
  if(confirm(t('Refresh the sharing link? The old link will stop working immediately. Existing members keep access and blocked accounts stay blocked.')))sharingAction('post',`${base.value}/sharing/rotate`);
 }
-function removeMember(person){
- if(confirm(t('Remove {name}? They lose membership but can join again using an active link.',{name:person.name})))sharingAction('delete',`${base.value}/members/${person.id}`);
-}
-function blockMember(person){
- if(confirm(t('Block {name}? This account will lose access and cannot rejoin, even with a refreshed link. In guest mode they can still view while signed out.',{name:person.name})))sharingAction('post',`${base.value}/blocks/${person.id}`);
-}
-function unblockMember(person){
- if(confirm(t('Unblock {name}? They can join again using an active link. Membership is not restored automatically.',{name:person.name})))sharingAction('delete',`${base.value}/blocks/${person.id}`);
-}
 function remove(word) {
     if (confirm(t('Remove “{term}” from this collection? It stays in your word pool.', { term: word.term }))) router.delete(`${base.value}/words/${word.id}`);
 }
@@ -126,8 +117,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
             <p v-if="sharing.access==='guests'" class="notice">{{t('Guest access cannot identify signed-out visitors. A blocked account can still view the collection while signed out. Choose signed-in access to enforce account blocking.')}}</p>
             <div v-if="collection.share_uuid" class="share-link"><input readonly :value="shareUrl" :aria-label="t('Collection share link')" @focus="$event.target.select()"/><div class="share-link-actions"><button type="button" class="button secondary" :disabled="sharingBusy" @click="rotateLink">{{t('Refresh link')}}</button><button type="button" class="button" :disabled="sharingBusy" @click="copy">{{t('Copy link')}}</button></div><small role="status">{{copyStatus}}</small></div>
             <p v-else class="muted small">{{t('Link sharing is off. Enable it to create a new sharing link.')}}</p>
-            <section class="sharing-people" aria-labelledby="joined-heading"><h4 id="joined-heading">{{t('Joined accounts ({count})',{count:sharing.participants?.length??0})}}</h4><p v-if="!sharing.participants?.length" class="muted small">{{t('No accounts have joined this collection.')}}</p><article v-for="person in sharing.participants" :key="person.id" class="sharing-person"><strong>{{person.name}}</strong><div class="actions"><button type="button" class="text-button" :disabled="sharingBusy" @click="removeMember(person)">{{t('Remove member')}}</button><button type="button" class="text-button danger" :disabled="sharingBusy" @click="blockMember(person)">{{t('Block account')}}</button></div></article></section>
-            <section v-if="sharing.blocked?.length" class="sharing-people" aria-labelledby="blocked-heading"><h4 id="blocked-heading">{{t('Blocked accounts ({count})',{count:sharing.blocked.length})}}</h4><article v-for="person in sharing.blocked" :key="person.id" class="sharing-person"><strong>{{person.name}}</strong><button type="button" class="text-button" :disabled="sharingBusy" @click="unblockMember(person)">{{t('Unblock account')}}</button></article></section>
+            <Link class="button secondary" :href="`${base}/sharing/members`">{{t('Manage members')}}</Link>
         </section>
         <div class="section-heading"><div><h2>{{ t('{count} words to discover', { count: totalWords }) }}</h2><p class="muted small word-order">{{ t('Newest words first') }}</p></div><button v-if="owner" class="button secondary" @click="showAdd = true">{{ t('+ Add from pool') }}</button></div>
         <div class="word-list">
