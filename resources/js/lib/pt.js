@@ -377,5 +377,7 @@ export default {
   "Unexpected extra attempt.": "Tentativa adicional inesperada.",
   "Follow the session question and retry order.": "Siga a ordem das perguntas e repetições da sessão.",
   "Finish all questions and required retries before saving.": "Conclua todas as perguntas e repetições necessárias antes de guardar.",
-  "Choose a local voice to start reading aloud.": "Escolha uma voz local para começar a leitura em voz alta."
+  "Choose a local voice to start reading aloud.": "Escolha uma voz local para começar a leitura em voz alta.",
+  "Unseen and unlearned words come first. A missed word returns up to twice more, stopping as soon as you answer correctly.": "As palavras ainda não estudadas ou erradas na primeira tentativa têm prioridade. Uma palavra errada volta até mais duas vezes, deixando de aparecer assim que responder corretamente.",
+  "Round complete. Repetitions do not change your first-attempt score.": "Ronda concluída. As repetições não alteram o resultado da primeira tentativa."
 };

@@ -32,9 +32,19 @@ class StudyRetryTest extends TestCase
         return [$user, $collection, $words];
     }
 
-    private function start($collection, string $mode = 'study', array $settings = []): array
+    private function start($collection, string $mode = 'study', array $settings = [], int $version = 2): array
     {
-        return $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode, 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 3], $settings)])->assertCreated()->json();
+        $session = $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode, 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 3], $settings)])->assertCreated()->json();
+        if ($mode === 'study') {
+            $this->assertSame(3, $session['rules_version']);
+            // Existing v2 regression scenarios represent already-open sessions.
+            if ($version === 2) {
+                StudySession::findOrFail($session['id'])->update(['rules_version' => 2]);
+                $session['rules_version'] = 2;
+            }
+        }
+
+        return $session;
     }
 
     private function finish($collection, array $session, array $answers)
@@ -149,6 +159,51 @@ class StudyRetryTest extends TestCase
         $initial = [$this->answer($a, 1, 'wrong'), $this->answer($b, 1, 'wrong'), $this->answer($d)];
         $this->finish($c, $s, [...$initial, $this->answer($a, 2), $this->answer($a, 3), $this->answer($b, 2), $this->answer($b, 3)])->assertUnprocessable();
         $this->finish($c, $s, [...$initial, $this->answer($a, 2), $this->answer($b, 2), $this->answer($a, 3), $this->answer($b, 3)])->assertOk()->assertJsonPath('session.correct', 1)->assertJsonPath('session.repeat_count', 4);
+    }
+
+    public function test_v3_stops_after_correct_first_or_second_attempt_and_preserves_first_score(): void
+    {
+        [, $c] = $this->fixture(1);
+        $s = $this->start($c, 'study', [], 3);
+        $q = $s['questions'][0];
+        $this->finish($c, $s, [$this->answer($q), $this->answer($q, 2)])->assertUnprocessable();
+        $this->finish($c, $s, [$this->answer($q)])->assertOk()->assertJsonPath('session.repeat_count', 0)->assertJsonPath('session.correct', 1);
+        $s = $this->start($c, 'study', [], 3);
+        $answers = [$this->answer($q, 1, 'wrong'), $this->answer($q, 2)];
+        $this->finish($c, $s, [$answers[0]])->assertUnprocessable();
+        $this->finish($c, $s, [...$answers, $this->answer($q, 3)])->assertUnprocessable();
+        $this->finish($c, $s, $answers)->assertOk()->assertJsonPath('session.correct', 0)->assertJsonPath('session.total', 1)->assertJsonPath('session.repeat_count', 1)->assertJsonCount(1, 'first_results');
+    }
+
+    public function test_v3_third_attempt_finishes_whether_correct_or_wrong_and_fourth_is_rejected(): void
+    {
+        [, $c] = $this->fixture(1);
+        foreach (['wrong', null] as $last) {
+            $s = $this->start($c, 'study', [], 3);
+            $q = $s['questions'][0];
+            $answers = [$this->answer($q, 1, 'wrong'), $this->answer($q, 2, 'wrong'), $this->answer($q, 3, $last)];
+            $this->finish($c, $s, array_slice($answers, 0, 2))->assertUnprocessable();
+            $this->finish($c, $s, [...$answers, $this->answer($q, 4)])->assertUnprocessable();
+            $result = $this->finish($c, $s, $answers)->assertOk()->assertJsonPath('session.rules_version', 3)->assertJsonPath('session.correct', 0)->assertJsonPath('session.total_attempts', 3)->assertJsonPath('session.repeat_count', 2)->assertJsonPath('results.2.correct', $last === null)->json();
+            $this->finish($c, $s, [])->assertOk()->assertExactJson($result);
+        }
+    }
+
+    public function test_v3_interleaves_only_still_incorrect_words_and_keeps_priority_first_attempt(): void
+    {
+        [, $c] = $this->fixture(3);
+        $s = $this->start($c, 'study', [], 3);
+        [$a, $b, $d] = $s['questions'];
+        $answers = [$this->answer($a, 1, 'wrong'), $this->answer($b, 1, 'wrong'), $this->answer($d), $this->answer($a, 2), $this->answer($b, 2, 'wrong'), $this->answer($b, 3, 'wrong')];
+        $forged = $answers;
+        $forged[3]['attempt_no'] = 3;
+        $this->finish($c, $s, $forged)->assertUnprocessable();
+        $forged = $answers;
+        [$forged[3], $forged[4]] = [$forged[4], $forged[3]];
+        $this->finish($c, $s, $forged)->assertUnprocessable();
+        $this->assertDatabaseCount('study_answers', 0);
+        $this->finish($c, $s, $answers)->assertOk()->assertJsonPath('session.correct', 1)->assertJsonPath('session.total', 3)->assertJsonPath('session.repeat_count', 3);
+        $this->assertSame([$a['id'], $b['id']], array_column($this->start($c, 'study', ['count' => 2], 3)['questions'], 'id'));
     }
 
     private function history($user, $collection, $word, bool $correct, int $minutesAgo = 1, string $mode = 'study', bool $completed = true): void

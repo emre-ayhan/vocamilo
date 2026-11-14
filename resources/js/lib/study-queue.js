@@ -2,8 +2,10 @@
 export function createStudyQueue(questions) {
     return questions.map(question => ({ ...question, attempt_no: 1, occurrence_id: `${question.id}:1` }));
 }
-export function appendStudyRepeat(queue, occurrence, correct, firstWrong) {
-    const repeat = occurrence.attempt_no === 1 ? !correct : firstWrong && (occurrence.attempt_no < 3 || !correct);
+export function appendStudyRepeat(queue, occurrence, correct, firstWrong, rulesVersion = 3) {
+    const repeat = rulesVersion === 2
+        ? (occurrence.attempt_no === 1 ? !correct : firstWrong && (occurrence.attempt_no < 3 || !correct))
+        : !correct && occurrence.attempt_no < 3;
     if (!repeat) return queue;
     const attempt = occurrence.attempt_no + 1;
     // Append after all remaining questions to space repeats whenever possible.

@@ -58,7 +58,7 @@ class StudySessionController extends Controller
 
             return ['id' => $w->id, 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $settings['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written', 'options' => $others->push($w->$answerKey)->shuffle()->values()->all()];
         })->values()->all();
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 2 : 1]);
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 3 : 1]);
         // Notes may be displayed privately, but are not copied into historical data.
         $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
@@ -154,9 +154,12 @@ class StudySessionController extends Controller
                 $correct += (int) $right;
                 $assessed += (int) $self;
             }
-            // Keep at most one pending occurrence per word for interleaved practice.
-            // Attempt two always schedules attempt three, even if it is correct.
-            if (($number === 1 && ! $right) || $number === 2 || ($number >= 3 && ! $right)) {
+            // v3 caps practice at two extra tries, stopping as soon as an answer is correct.
+            // Keep v2 validation for sessions opened before this rollout.
+            $retry = $s->rules_version >= 3
+                ? (! $right && $number < 3)
+                : (($number === 1 && ! $right) || $number === 2 || ($number >= 3 && ! $right));
+            if ($retry) {
                 $queue[] = $qi;
             }
             $s->answers()->create(['word_id' => in_array($q['id'], $existing, true) ? $q['id'] : null, 'position' => $position, 'question_index' => $qi, 'attempt_no' => $number, 'prompt' => $q['prompt'], 'expected' => $q['expected'], 'answer' => $a['answer'], 'correct' => $right, 'self_assessed' => $self]);
