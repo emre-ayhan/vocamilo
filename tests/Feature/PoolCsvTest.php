@@ -182,4 +182,56 @@ class PoolCsvTest extends TestCase
             $this->travel(61)->seconds();
         }
     }
+
+    public function test_csv_bulk_new_words_inherit_rtl_without_changing_other_pools(): void
+    {
+        [$u, $rtl, $ltr] = $this->fixture();
+        $rtl->update(['text_direction' => 'rtl']);
+        $foreign = User::factory()->create()->words()->create(['term' => 'שלום', 'definition' => 'foreign', 'text_direction' => 'ltr']);
+        $elsewhere = $u->words()->create(['term' => 'שלום', 'definition' => 'other pool', 'text_direction' => 'ltr']);
+        $ltr->words()->attach($elsewhere);
+        $this->preview($rtl, "שלום,hello\nمرحبا,welcome")->assertOk();
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect();
+        $this->assertSame(['rtl', 'rtl'], $rtl->words()->pluck('text_direction')->all());
+        $this->assertSame('ltr', $elsewhere->fresh()->text_direction);
+        $this->assertSame('other pool', $elsewhere->fresh()->definition);
+        $this->assertSame('foreign', $foreign->fresh()->definition);
+        $this->assertSame('ltr', $foreign->fresh()->text_direction);
+    }
+
+    public function test_pool_or_word_direction_drift_invalidates_preview_atomically(): void
+    {
+        foreach (['pool', 'word'] as $change) {
+            [$u, $pool] = $this->fixture();
+            $word = $u->words()->create(['term' => 'word', 'definition' => 'old', 'note' => 'private', 'text_direction' => 'ltr']);
+            $pool->words()->attach($word);
+            $this->preview($pool, "word,new definition\nfresh,new")->assertOk();
+            ($change === 'pool' ? $pool : $word)->update(['text_direction' => 'rtl']);
+            $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertSessionHasErrors('file');
+            $this->assertSame('old', $word->fresh()->definition);
+            $this->assertSame('private', $word->fresh()->note);
+            $this->assertDatabaseMissing('words', ['user_id' => $u->id, 'term' => 'fresh']);
+        }
+    }
+
+    public function test_existing_rtl_shared_word_updates_only_definition_and_inconsistent_target_rejects(): void
+    {
+        [$u, $a, $b] = $this->fixture();
+        $a->update(['text_direction' => 'rtl']);
+        $b->update(['text_direction' => 'rtl']);
+        $word = $u->words()->create(['term' => 'שלום', 'definition' => 'old', 'note' => 'unchanged', 'text_direction' => 'rtl']);
+        $a->words()->attach($word);
+        $b->words()->attach($word);
+        $this->preview($a, 'שלום,new')->assertOk();
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect();
+        $this->assertSame('new', $word->fresh()->definition);
+        $this->assertSame('unchanged', $word->fresh()->note);
+        $this->assertSame('rtl', $b->words()->first()->text_direction);
+        // Simulate preexisting inconsistent data: CSV must not silently overwrite direction.
+        $word->update(['text_direction' => 'ltr']);
+        $this->preview($a, 'שלום,forbidden')->assertOk();
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertSessionHasErrors('file');
+        $this->assertSame('new', $word->fresh()->definition);
+        $this->assertSame('ltr', $word->fresh()->text_direction);
+    }
 }

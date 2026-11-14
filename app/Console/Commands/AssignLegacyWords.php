@@ -33,6 +33,7 @@ class AssignLegacyWords extends Command
             $this->info(($this->option('apply') ? 'Apply' : 'Dry run').': '.$count.' unpooled words for '.$email.' into pool '.$pool->id.' ('.$pool->name.').');
             if ($this->option('apply')) {
                 $words->select('words.id')->chunkById(500, function ($chunk) use ($pool) {
+                    $pool->user->words()->whereIn('id', $chunk->pluck('id'))->where('text_direction', '!=', $pool->text_direction)->update(['text_direction' => $pool->text_direction]);
                     $pool->words()->syncWithoutDetaching($chunk->pluck('id')->all());
                 });
             }

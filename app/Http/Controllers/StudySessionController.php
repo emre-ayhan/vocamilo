@@ -72,9 +72,12 @@ class StudySessionController extends Controller
             $variant = $cycle[$index % count($combinations)];
             $answerKey = $variant['direction'];
             $promptKey = $answerKey === 'term' ? 'definition' : 'term';
-            $others = $words->pluck($answerKey)->unique(fn ($v) => self::normalize($v))->filter(fn ($v) => self::normalize($v) !== self::normalize($w->$answerKey))->shuffle()->take(3);
+            $others = $words->unique(fn ($candidate) => self::normalize($candidate->$answerKey))->filter(fn ($candidate) => self::normalize($candidate->$answerKey) !== self::normalize($w->$answerKey))->shuffle()->take(3);
+            $type = $variant['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written';
+            $choices = $others->push($w)->shuffle()->values();
 
-            return ['id' => $w->id, 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $variant['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written', 'options' => $others->push($w->$answerKey)->shuffle()->values()->all()];
+            // Snapshot presentation separately from scoring; each distractor may use another writing direction.
+            return ['id' => $w->id, 'text_direction' => $w->text_direction ?? 'ltr', 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $type, 'options' => $choices->map(fn ($candidate) => $candidate->$answerKey)->all(), 'option_directions' => $choices->map(fn ($candidate) => $candidate->text_direction ?? 'ltr')->all()];
         })->values()->all();
         $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => in_array($d['mode'], ['study', 'test'], true) ? 3 : 1]);
         // Notes may be displayed privately, but are not copied into historical data.

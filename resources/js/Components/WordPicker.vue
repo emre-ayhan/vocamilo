@@ -1,4 +1,5 @@
 <script setup>
+import VocabularyText from "../Components/VocabularyText.vue";
 import { useI18n } from "../lib/i18n.js";
 const {t,locale}=useI18n();
 import { computed, ref, watch } from 'vue';
@@ -53,7 +54,7 @@ function clearAll() { emit('update:modelValue', []); resetRange(); }
     <div class="pick-list">
         <label v-for="word in words" :key="word.id" class="check" :class="{'range-start': rangeMode && anchor === word.id}">
             <input type="checkbox" :checked="selected.has(word.id)" :disabled="disabled" @click="toggle(word.id, $event)"/>
-            <span><strong>{{ word.term }}</strong><small>{{ word.definition }}</small><small v-if="rangeMode && anchor === word.id">{{t("Range starts here")}}</small></span>
+            <span><VocabularyText as="strong" :text="word.term" :direction="word.text_direction"/><VocabularyText as="small" :text="word.definition" :direction="word.text_direction"/><small v-if="rangeMode && anchor === word.id">{{t("Range starts here")}}</small></span>
         </label>
         <p v-if="!words.length" class="muted">{{t("No more matching words. Try another search or add words to your pool.")}}</p>
     </div>

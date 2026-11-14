@@ -214,3 +214,13 @@ Joined users can leave a collection after confirmation. This removes membership 
 Deploy with a database backup and a short maintenance window: `php artisan down`, `git pull --ff-only`, `php artisan migrate --force`, `npm run build`, `php artisan optimize:clear`, then `php artisan up`. Perform the explicit one-account assignment separately after creating the target pool. No background worker is required.
 
 Collection CSV downloads are owner-only. Joined users, guests and administrators who do not own the collection cannot export it. The word-pool detail page retains its CSV export action, scoped to that pool’s owner.
+
+### Writing direction (LTR / RTL)
+
+Pool creation and editing offer a writing-direction choice. New pools can suggest RTL for languages such as Arabic, Hebrew, Persian and Urdu; explicit choices and existing pool settings are never silently replaced. Migration `2026_11_14_000008_add_text_direction` adds `text_direction` to pools and words, defaulting all existing records to `ltr` without changing words, sharing links, memberships, consent or results.
+
+One word record cannot simultaneously belong to LTR and RTL pools. Reuse and pool direction changes validate the entire affected set before applying any update. Import, word creation, reuse, pool editing and legacy assignment serialize on the owning account row; a conflicting change fails without partial assignment. Unpooled words can adopt the target pool direction, while removing the last pool or deleting a pool retains each word's current direction for its existing collections. CSV previews are invalidated by direction changes.
+
+Pool direction is the fallback presentation direction. Each word, definition and choice is independently bidi-isolated and detects its own text direction, so an Arabic term with an English definition does not reverse the application controls. EN/PT interface navigation remains unchanged. Flashcards and both practice modes carry per-word and per-option directions; saved sessions snapshot those values without altering answer matching, scoring or repeat logic. Historical sessions without direction metadata fall back to LTR with automatic text detection.
+
+Deploy with the standard database backup and maintenance steps, including `php artisan migrate --force` before using the updated application. This change does not require rerunning legacy assignment.

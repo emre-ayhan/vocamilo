@@ -16,8 +16,10 @@ export function createQuestions(words,settings={},random=Math.random){
    const promptKey=answerKey==='term'?'definition':'term';
    const expected=word[answerKey];
    const others=[...new Map(words.filter(w=>normalizeAnswer(w[answerKey])!==normalizeAnswer(expected)).map(w=>[normalizeAnswer(w[answerKey]),w[answerKey]])).values()];
-   return {id:word.id,prompt:word[promptKey],expected,note:word.note??null,answerKey,
-    options:shuffle([expected,...shuffle(others,random).slice(0,3)],random),
+   const options=shuffle([expected,...shuffle(others,random).slice(0,3)],random);
+   const directionOf=value=>value===expected?word.text_direction:words.find(w=>normalizeAnswer(w[answerKey])===normalizeAnswer(value))?.text_direction;
+   return {id:word.id,text_direction:word.text_direction==='rtl'?'rtl':'ltr',prompt:word[promptKey],expected,note:word.note??null,answerKey,
+    options,option_directions:options.map(value=>directionOf(value)==='rtl'?'rtl':'ltr'),
     type:variant.type==='choice'&&others.length?'choice':'written'};
  });
 }

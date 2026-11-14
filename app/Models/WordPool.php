@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class WordPool extends Model
 {
-    protected $fillable = ['name', 'language'];
+    protected $fillable = ['name', 'language', 'text_direction'];
 
     public function user()
     {

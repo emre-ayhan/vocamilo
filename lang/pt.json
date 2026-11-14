@@ -452,5 +452,6 @@
   "Sharing disabled.": "Partilha desativada.",
   "This account is suspended.": "Esta conta está suspensa.",
   "The selected pool changed. Upload the CSV again.": "O conjunto selecionado mudou. Carregue novamente o CSV.",
-  "This preview was replaced. Upload the CSV again.": "Esta pré-visualização foi substituída. Carregue novamente o CSV."
+  "This preview was replaced. Upload the CSV again.": "Esta pré-visualização foi substituída. Carregue novamente o CSV.",
+    "Words shared with another pool must use the same text direction.": "As palavras partilhadas com outro conjunto devem usar a mesma direção do texto."
 }

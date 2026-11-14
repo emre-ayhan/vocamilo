@@ -48,5 +48,5 @@ test('Study switches retain at least one choice; question replay is a keyboard-n
  assert.match(source,/answerTypes.length===1&&answerTypes.includes/);
  assert.doesNotMatch(source,/Read question again/);
  assert.match(source,/v-if="mode!=='flashcards'&&speechEnabled&&voiceURI" type="button" class="spoken-question"/);
- assert.match(source,/@click="speakQuestion">{{current.prompt}}/);
+ assert.match(source,/@click="speakQuestion"><VocabularyText :text="current.prompt"/);
 });

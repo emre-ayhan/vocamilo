@@ -36,7 +36,7 @@ class VocabularyController extends Controller
             return redirect('/word-pools/'.$pool->id.($query ? '?'.http_build_query($query) : ''));
         }
 
-        return Inertia::render('Words/Pools', ['pools' => $r->user()->wordPools()->withCount('words')->orderBy('name')->get(['id', 'name', 'language'])]);
+        return Inertia::render('Words/Pools', ['pools' => $r->user()->wordPools()->withCount('words')->orderBy('name')->get(['id', 'name', 'language', 'text_direction'])]);
     }
 
     public function pool(Request $r, int $pool)
@@ -56,7 +56,7 @@ class VocabularyController extends Controller
         DB::transaction(function () use ($r, $d, $pool) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
             $p = $r->user()->wordPools()->findOrFail($pool);
-            $w = $r->user()->words()->create($d);
+            $w = $r->user()->words()->create([...$d, 'text_direction' => $p->text_direction]);
             $p->words()->attach($w);
         });
 

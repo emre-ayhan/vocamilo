@@ -17,7 +17,7 @@ class CollectionController extends Controller
 {
     public function index(Request $r)
     {
-        return Inertia::render('Collections/Index', ['pools' => $r->user()->wordPools()->orderBy('name')->get(['id', 'name', 'language']), 'collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->when($r->user()->is_admin, fn ($q) => $q->where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhereHas('user', fn ($q) => $q->where('admin_disclosure_version', 1)->whereNotNull('admin_disclosure_accepted_at'))))->withCount('words')->latest()->get()->each(function ($c) use ($r) {
+        return Inertia::render('Collections/Index', ['pools' => $r->user()->wordPools()->orderBy('name')->get(['id', 'name', 'language', 'text_direction']), 'collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->when($r->user()->is_admin, fn ($q) => $q->where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhereHas('user', fn ($q) => $q->where('admin_disclosure_version', 1)->whereNotNull('admin_disclosure_accepted_at'))))->withCount('words')->latest()->get()->each(function ($c) use ($r) {
             if ($r->user()->is_admin) {
                 AdminAudit::record($r->user()->id, 'collection_index_item', $c->id);
             }
@@ -37,7 +37,7 @@ class CollectionController extends Controller
         $owner = $c->user_id === $r->user()->id;
         $poolIds = $owner ? $this->poolIds($r) : [];
 
-        return Inertia::render('Collections/Show', ['collection' => $this->payload($c, false, $r->user()->id, true), 'shared' => false, 'isOwner' => $owner, 'member' => ! $owner, 'summary' => StudySession::summaryFor($c, $r->user()->id), ...($owner ? ['sharing' => $this->sharingData($c)] : []), 'pools' => $owner ? $r->user()->wordPools()->withCount('words')->orderBy('name')->get() : [], 'filters' => ['pool_ids' => $poolIds], 'availableWords' => $owner ? $r->user()->words()->whereHas('pools', fn ($q) => $q->whereIn('word_pools.id', $poolIds))->whereDoesntHave('collections', fn ($q) => $q->where('collections.id', $c->id))->select('id', 'term', 'definition')->orderBy('term')->get() : []]);
+        return Inertia::render('Collections/Show', ['collection' => $this->payload($c, false, $r->user()->id, true), 'shared' => false, 'isOwner' => $owner, 'member' => ! $owner, 'summary' => StudySession::summaryFor($c, $r->user()->id), ...($owner ? ['sharing' => $this->sharingData($c)] : []), 'pools' => $owner ? $r->user()->wordPools()->withCount('words')->orderBy('name')->get() : [], 'filters' => ['pool_ids' => $poolIds], 'availableWords' => $owner ? $r->user()->words()->whereHas('pools', fn ($q) => $q->whereIn('word_pools.id', $poolIds))->whereDoesntHave('collections', fn ($q) => $q->where('collections.id', $c->id))->select('id', 'term', 'definition', 'text_direction')->orderBy('term')->get() : []]);
     }
 
     public function words(Request $r, int $collection)
@@ -338,7 +338,7 @@ class CollectionController extends Controller
         $notes = $learner && $learner !== $c->user_id ? DB::table('user_word_notes')->where('user_id', $learner)->pluck('note', 'word_id') : collect();
 
         return $words->map(function ($w) use ($c, $learner, $notes) {
-            $row = $w->only('id', 'term', 'definition');
+            $row = $w->only('id', 'term', 'definition', 'text_direction');
             if ($learner) {
                 $row['note'] = $learner === $c->user_id ? $w->note : ($notes[$w->id] ?? null);
             }

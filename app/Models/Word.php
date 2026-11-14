@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Word extends Model
 {
-    protected $fillable = ['term', 'definition', 'note'];
+    protected $fillable = ['term', 'definition', 'note', 'text_direction'];
 
     public function pools()
     {

@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WordPoolController extends Controller
 {
     private function data(Request $r): array
     {
-        return $r->validate(['name' => 'required|string|max:150', 'language' => ['required', 'string', 'max:35', 'regex:/^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8})*$/']]);
+        return $r->validate(['text_direction' => 'sometimes|required|in:ltr,rtl', 'name' => 'required|string|max:150', 'language' => ['required', 'string', 'max:35', 'regex:/^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8})*$/']]);
     }
 
     public function available(Request $r, int $pool)
@@ -19,7 +20,7 @@ class WordPoolController extends Controller
         $d = $r->validate(['search' => 'nullable|string|max:200', 'page' => 'nullable|integer|min:1']);
         $search = trim($d['search'] ?? '');
 
-        return response()->json($r->user()->words()->whereDoesntHave('pools', fn ($q) => $q->where('word_pools.id', $pool))->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->where('term', 'like', '%'.$search.'%')->orWhere('definition', 'like', '%'.$search.'%')))->orderBy('term')->orderBy('id')->paginate(30, ['id', 'term', 'definition'])->withQueryString());
+        return response()->json($r->user()->words()->whereDoesntHave('pools', fn ($q) => $q->where('word_pools.id', $pool))->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->where('term', 'like', '%'.$search.'%')->orWhere('definition', 'like', '%'.$search.'%')))->orderBy('term')->orderBy('id')->paginate(30, ['id', 'term', 'definition', 'text_direction'])->withQueryString());
     }
 
     public function store(Request $r)
@@ -39,7 +40,14 @@ class WordPoolController extends Controller
         $d = $this->data($r);
         DB::transaction(function () use ($r, $pool, $d) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
-            $r->user()->wordPools()->findOrFail($pool)->update($d);
+            $p = $r->user()->wordPools()->findOrFail($pool);
+            $direction = $d['text_direction'] ?? $p->text_direction;
+            $conflict = $p->words()->whereHas('pools', fn ($q) => $q->where('word_pools.id', '!=', $p->id)->where('text_direction', '!=', $direction))->exists();
+            if ($conflict) {
+                throw ValidationException::withMessages(['text_direction' => __('Words shared with another pool must use the same text direction.')]);
+            }
+            $p->update($d);
+            $p->words()->where('words.text_direction', '!=', $direction)->update(['text_direction' => $direction]);
         });
 
         return back();
@@ -63,6 +71,11 @@ class WordPoolController extends Controller
             $p = $r->user()->wordPools()->findOrFail($pool);
             $ids = $r->user()->words()->whereIn('id', $d['word_ids'])->pluck('id');
             abort_unless($ids->count() === count($d['word_ids']), 422);
+            $conflict = $r->user()->words()->whereIn('id', $ids)->whereHas('pools', fn ($q) => $q->where('text_direction', '!=', $p->text_direction))->exists();
+            if ($conflict) {
+                throw ValidationException::withMessages(['word_ids' => __('Words shared with another pool must use the same text direction.')]);
+            }
+            $r->user()->words()->whereIn('id', $ids)->where('text_direction', '!=', $p->text_direction)->update(['text_direction' => $p->text_direction]);
             $p->words()->syncWithoutDetaching($ids);
         });
 

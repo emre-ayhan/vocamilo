@@ -553,5 +553,8 @@ export default {
 "No local voice matches {language}. You can choose another available voice.":"Nenhuma voz local corresponde a {language}. Pode escolher outra voz disponível.",
 "Choose a language pool to explore your words.":"Escolha um grupo de idioma para explorar as suas palavras.",
 "\u2190 Word pools":"← Grupos de palavras",
-"\u2190 Back to pool":"← Voltar ao grupo"
+"\u2190 Back to pool":"← Voltar ao grupo",
+"Text direction":"Direção do texto",
+"Left to right (LTR)":"Da esquerda para a direita (LTR)",
+"Right to left (RTL)":"Da direita para a esquerda (RTL)"
 };

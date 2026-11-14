@@ -17,7 +17,7 @@ class ImportController extends Controller
         $d = $r->validate(['pool_id' => 'nullable|integer']);
         $pool = isset($d['pool_id']) ? $r->user()->wordPools()->findOrFail($d['pool_id']) : null;
 
-        return Inertia::render('Import/Index', ['preview' => null, 'selectedPoolId' => $pool?->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language']), 'collections' => $r->user()->collections()->get(['id', 'title'])]);
+        return Inertia::render('Import/Index', ['preview' => null, 'selectedPoolId' => $pool?->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language', 'text_direction']), 'collections' => $r->user()->collections()->get(['id', 'title'])]);
     }
 
     public function preview(Request $r, CsvVocabulary $csv)
@@ -69,10 +69,10 @@ class ImportController extends Controller
             $rows[] = $row + ['key' => $key, 'action' => $action, 'snapshot' => $word ?: null];
         }
         $previewId = (string) Str::uuid();
-        $r->session()->put('csv_preview', ['preview_id' => $previewId, 'version' => 3, 'pool_id' => $target->id, 'pool_snapshot' => $target->only('id', 'name', 'language'), 'membership_hash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)), 'user_id' => $r->user()->id, 'rows' => $rows, 'expires_at' => now()->addMinutes(30)->timestamp]);
+        $r->session()->put('csv_preview', ['preview_id' => $previewId, 'version' => 3, 'pool_id' => $target->id, 'pool_snapshot' => $target->only('id', 'name', 'language', 'text_direction'), 'membership_hash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)), 'user_id' => $r->user()->id, 'rows' => $rows, 'expires_at' => now()->addMinutes(30)->timestamp]);
         $display = array_map(fn ($row) => collect($row)->only('term', 'definition', 'action')->all(), array_slice($rows, 0, 50));
 
-        return Inertia::render('Import/Index', ['selectedPoolId' => $target->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language']), 'preview' => ['preview_id' => $previewId, 'pool_id' => $target->id, 'rows' => $display, 'total' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'duplicates' => $duplicates, 'warnings' => $warnings, 'headers' => $parsed['headers']], 'collections' => $r->user()->collections()->get(['id', 'title'])]);
+        return Inertia::render('Import/Index', ['selectedPoolId' => $target->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language', 'text_direction']), 'preview' => ['preview_id' => $previewId, 'pool_id' => $target->id, 'rows' => $display, 'total' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'duplicates' => $duplicates, 'warnings' => $warnings, 'headers' => $parsed['headers']], 'collections' => $r->user()->collections()->get(['id', 'title'])]);
     }
 
     private function termKey(string $term): string
@@ -82,7 +82,7 @@ class ImportController extends Controller
 
     private function snapshot($pool, int $userId): array
     {
-        return $pool->words()->where('words.user_id', $userId)->reorder()->orderBy('words.id')->get(['words.id', 'words.term', 'words.definition'])->map(fn ($word) => $word->only('id', 'term', 'definition'))->all();
+        return $pool->words()->where('words.user_id', $userId)->reorder()->orderBy('words.id')->get(['words.id', 'words.term', 'words.definition', 'words.text_direction'])->map(fn ($word) => $word->only('id', 'term', 'definition', 'text_direction'))->all();
     }
 
     public function store(Request $r)
@@ -101,13 +101,16 @@ class ImportController extends Controller
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
             $target = $r->user()->wordPools()->whereKey($preview['pool_id'])->lockForUpdate()->firstOrFail();
             $c = isset($d['collection_id']) ? $r->user()->collections()->whereKey($d['collection_id'])->lockForUpdate()->firstOrFail() : null;
-            if ($target->only('id', 'name', 'language') !== $preview['pool_snapshot'] || ! hash_equals($preview['membership_hash'] ?? '', hash('sha256', json_encode($this->snapshot($target, $r->user()->id), JSON_THROW_ON_ERROR)))) {
+            if ($target->only('id', 'name', 'language', 'text_direction') !== $preview['pool_snapshot'] || ! hash_equals($preview['membership_hash'] ?? '', hash('sha256', json_encode($this->snapshot($target, $r->user()->id), JSON_THROW_ON_ERROR)))) {
                 throw ValidationException::withMessages(['file' => __('Your word pool changed after preview. Upload the CSV again before importing.')]);
             }
             $pool = $target->words()->where('words.user_id', $r->user()->id)->get()->keyBy('id');
+            if ($pool->contains(fn ($word) => $word->text_direction !== $target->text_direction)) {
+                throw ValidationException::withMessages(['file' => __('Word and pool text directions must match before importing.')]);
+            }
             foreach ($preview['rows'] as $row) {
                 if ($row['snapshot'] === null) {
-                    $word = $r->user()->words()->create(['term' => $row['term'], 'definition' => $row['definition']]);
+                    $word = $r->user()->words()->create(['term' => $row['term'], 'definition' => $row['definition'], 'text_direction' => $target->text_direction]);
                     $target->words()->attach($word->id);
                 } else {
                     $word = $pool->get($row['snapshot']['id']);
