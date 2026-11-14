@@ -14,3 +14,17 @@ test('only Study multiple-choice selection auto-checks',()=>{
     assert.equal(shouldAutoCheck('test','written'),false);
     assert.equal(shouldAutoCheck('flashcards','choice'),false);
 });
+
+test('Study choices use accessible native radios with circle feedback instead of letters',async()=>{
+    const {readFile}=await import('node:fs/promises');
+    const source=await readFile(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+    assert.match(source,/type="radio" name="answer-choice" :checked="answer===option"/);
+    assert.match(source,/@change="selectOption\(option\)" :disabled="checked" required/);
+    assert.match(source,/<svg v-if="mode==='study'" class="answer-choice-icon"/);
+    assert.match(source,/<span v-else class="option-letter">/);
+    assert.match(source,/v-if="checked&&answer===option&&correct"/);
+    assert.match(source,/v-else-if="checked&&answer===option&&!correct"/);
+    assert.match(source,/input:focus-visible\+\.answer-choice-icon/);
+    assert.match(source,/class="answer-choice-icon"[^>]*aria-hidden="true"/);
+    assert.match(source,/role="status"><strong>{{correct\?t/);
+});
