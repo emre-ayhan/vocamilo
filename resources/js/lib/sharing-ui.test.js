@@ -43,3 +43,10 @@ test('Read Aloud is compact and includes a decorative speaker icon',()=>{
  assert.match(session,/class="read-aloud-label"><svg/);
  assert.match(session,/padding:12px 16px!important;margin-bottom:12px!important/);
 });
+
+test('Manage members is full width on a separate row after refresh and copy',()=>{
+ assert.match(source,/class="button secondary manage-members-button"/);
+ assert.match(source,/\.sharing-management \.manage-members-button\{display:flex;width:100%;box-sizing:border-box;justify-content:center;margin-top:12px\}/);
+ assert.ok(source.indexOf('class="button secondary manage-members-button"')>source.indexOf('@click="copy"'));
+ assert.match(source,/<\/div>\s*<p v-else[^>]*>.*<\/p>\s*<Link class="button secondary manage-members-button"/);
+});
