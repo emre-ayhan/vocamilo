@@ -340,5 +340,13 @@ export default {
   "Your account changed during linking. Please start again.": "A conta mudou durante a associação. Comece novamente.",
   "Install Vocamilo": "Instalar Vocamilo",
   "Use your browser’s Install app option. On iPhone or iPad, open Safari, tap Share, then Add to Home Screen.": "Utilize a opção Instalar aplicação do navegador. No iPhone ou iPad, abra o Safari, toque em Partilhar e depois em Adicionar ao ecrã principal.",
-  "An internet connection is required. No notifications or offline storage are enabled.": "É necessária uma ligação à Internet. Não são ativadas notificações nem armazenamento offline."
+  "An internet connection is required. No notifications or offline storage are enabled.": "É necessária uma ligação à Internet. Não são ativadas notificações nem armazenamento offline.",
+  "Read aloud": "Ler em voz alta",
+  "Optional device speech for questions and your selected answers. Only local voices are used.": "Leitura opcional das perguntas e das respostas selecionadas. São utilizadas apenas vozes locais do dispositivo.",
+  "Speech is not supported in this browser.": "Este navegador não suporta leitura em voz alta.",
+  "No local voices are available on this device. Install a device voice to use read aloud.": "Não existem vozes locais disponíveis neste dispositivo. Instale uma voz no dispositivo para utilizar a leitura em voz alta.",
+  "Voice and vocabulary language": "Voz e idioma do vocabulário",
+  "Choose a local voice": "Escolha uma voz local",
+  "Read questions and answers aloud": "Ler perguntas e respostas em voz alta",
+  "Read question again": "Ler novamente a pergunta"
 };

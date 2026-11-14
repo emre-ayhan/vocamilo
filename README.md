@@ -112,3 +112,9 @@ Upgrade: back up the database, pull this version, run `php artisan migrate --for
 The web manifest and branded icons let supported browsers install Vocamilo as a standalone app over HTTPS. Use the sidebar “Install Vocamilo” button when an install prompt is available, or the browser's install menu. On iPhone/iPad use Safari → Share → Add to Home Screen. Browser support, engagement requirements and UI vary; a button cannot force installation. Real-device installation and Google sign-in in the installed app must be tested on the deployed HTTPS host.
 
 This version intentionally registers **no service worker**, enables no offline mode or push notifications, and adds no Cache Storage/IndexedDB copies of private pages or answers. Normal login/session handling is unchanged. An internet connection is required. Static manifest and app icons contain no user information. See [MDN installability guidance](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).
+
+## Optional Study read-aloud
+
+Study has a Read aloud switch above the questions, off by default. Choose an installed local voice matching your vocabulary's language, then enable it; the interface language does not determine pronunciation. Questions and selected answers are spoken using the browser's Speech Synthesis API; written answers are read on Check. Changing question, switching off or leaving the page cancels prior speech.
+
+Only voices explicitly reported by the browser as `localService: true` are offered, with no network voice fallback and no server speech endpoint. If the API or local voices are unavailable the control explains why and stays disabled. Device voices can load asynchronously; availability and pronunciation depend on the browser/OS. Real-device audio and installed-app behavior still need acceptance testing. Read-aloud starts disabled whenever the Study page is opened.
