@@ -43,7 +43,7 @@ class PoolCsvTest extends TestCase
         $b->words()->attach($other);
         $legacy = $u->words()->create(['term' => 'word', 'definition' => 'unassigned legacy']);
         $this->preview($a)->assertInertia(fn (Assert $p) => $p->where('preview.created', 1)->where('preview.updated', 0)->where('selectedPoolId', $a->id));
-        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect('/words?pool_id='.$a->id);
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect('/word-pools/'.$a->id);
         $new = $a->words()->firstOrFail();
         $this->assertNotSame($other->id, $new->id);
         $this->assertNotSame($legacy->id, $new->id);

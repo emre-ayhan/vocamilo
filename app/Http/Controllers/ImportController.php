@@ -124,6 +124,6 @@ class ImportController extends Controller
         });
         $r->session()->forget('csv_preview');
 
-        return redirect($collectionId ? '/collections/'.$collectionId : '/words?pool_id='.$preview['pool_id'])->with('success', __('CSV import completed.'));
+        return redirect($collectionId ? '/collections/'.$collectionId : '/word-pools/'.$preview['pool_id'])->with('success', __('CSV import completed.'));
     }
 }

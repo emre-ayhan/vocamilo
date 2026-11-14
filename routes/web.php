@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/word-pools/{pool}', [WordPoolController::class, 'destroy']);
     Route::post('/word-pools/{pool}/words', [WordPoolController::class, 'attach']);
     Route::delete('/word-pools/{pool}/words/{word}', [WordPoolController::class, 'detach']);
+    Route::get('/word-pools/{pool}', [VocabularyController::class, 'pool']);
     Route::get('/words', [VocabularyController::class, 'index']);
     Route::post('/words', [VocabularyController::class, 'store']);
     Route::put('/words/{word}', [VocabularyController::class, 'update']);

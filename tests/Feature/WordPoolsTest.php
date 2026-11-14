@@ -26,7 +26,7 @@ class WordPoolsTest extends TestCase
         $w = $u->words()->create(['term' => 'bank', 'definition' => 'river edge', 'note' => 'private']);
         $this->assertDatabaseCount('word_pools', 0);
         $this->assertDatabaseCount('pool_word', 0);
-        $this->actingAs($u)->get('/words')->assertInertia(fn (Assert $p) => $p->has('words.data', 0)->where('selectedPool', null));
+        $this->actingAs($u)->get('/words')->assertInertia(fn (Assert $p) => $p->component('Words/Pools')->has('pools', 0)->missing('words')->missing('selectedPool'));
         $this->postJson('/words', ['term' => 'bank', 'definition' => 'financial'])->assertUnprocessable();
         $this->post('/word-pools', ['name' => 'English', 'language' => 'en-GB'])->assertRedirect();
         $pool = $u->wordPools()->first();
@@ -164,5 +164,26 @@ class WordPoolsTest extends TestCase
         $this->assertDatabaseCount('pool_word', 0);
         $this->actingAs($member)->get('/collections/'.$c->id)->assertOk();
         $this->get('/s/'.$c->share_uuid)->assertOk();
+    }
+
+    public function test_overview_has_only_owned_pool_cards_and_detail_is_scoped_paginated_and_searchable(): void
+    {
+        $u = User::factory()->create();
+        $a = $u->wordPools()->create(['name' => 'A', 'language' => 'en']);
+        $b = $u->wordPools()->create(['name' => 'B', 'language' => 'pt']);
+        $foreign = User::factory()->create()->wordPools()->create(['name' => 'Hidden pool', 'language' => 'fr']);
+        for ($i = 0; $i < 32; $i++) {
+            $w = $u->words()->create(['term' => 'Match '.$i, 'definition' => 'private definition', 'note' => 'private note']);
+            $a->words()->attach($w);
+        }
+        $hidden = $u->words()->create(['term' => 'Different', 'definition' => 'other pool only']);
+        $b->words()->attach($hidden);
+        $this->actingAs($u)->get('/words')->assertInertia(fn (Assert $p) => $p->component('Words/Pools')->has('pools', 2)->where('pools.0.words_count', 32)->missing('words')->missing('selectedPool'))->assertDontSee('private definition')->assertDontSee('private note')->assertDontSee('Hidden pool');
+        $this->get('/word-pools/'.$a->id.'?search=Match&page=2')->assertInertia(fn (Assert $p) => $p->component('Words/Index')->where('selectedPool.id', $a->id)->has('words.data', 2)->where('words.total', 32)->where('words.current_page', 2))->assertDontSee('other pool only');
+        $this->get('/word-pools/'.$foreign->id)->assertNotFound();
+        $this->getJson('/word-pools/'.$a->id.'?search[]=bad')->assertUnprocessable();
+        $this->getJson('/word-pools/'.$a->id.'?page=0')->assertUnprocessable();
+        $this->get('/words?pool_id='.$a->id.'&search=a%26b&page=2&unsafe=ignore')->assertRedirect('/word-pools/'.$a->id.'?search=a%26b&page=2');
+        $this->post('/word-pools', ['name' => 'New', 'language' => 'en'])->assertRedirect('/word-pools/'.$u->wordPools()->latest('id')->first()->id);
     }
 }

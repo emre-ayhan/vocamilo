@@ -107,7 +107,7 @@ class VocabularyTest extends TestCase
         $this->word($other, 'bright foreign');
         $this->collection($owner);
         $this->collection($other);
-        $this->actingAs($owner)->get('/words?search=bright')->assertInertia(fn (Assert $p) => $p->component('Words/Index')->has('words.data', 1)->where('words.data.0.term', 'bright'));
+        $this->actingAs($owner)->get('/word-pools/'.$this->pool($owner)->id.'?search=bright')->assertInertia(fn (Assert $p) => $p->component('Words/Index')->has('words.data', 1)->where('words.data.0.term', 'bright'));
         $this->get('/collections')->assertInertia(fn (Assert $p) => $p->component('Collections/Index')->has('collections', 1));
         $this->get('/dashboard')->assertInertia(fn (Assert $p) => $p->component('Dashboard')->where('stats.words', 1)->where('stats.collections', 1));
     }
@@ -231,7 +231,7 @@ class VocabularyTest extends TestCase
         $owner = User::factory()->create();
         $csv = UploadedFile::fake()->createWithContent('words.csv', "a star,sun\n");
         $this->actingAs($owner)->post('/imports/preview', ['pool_id' => $this->pool($owner)->id, 'file' => $csv, 'has_header' => false, 'term_column' => 1, 'definition_column' => 0])->assertInertia(fn (Assert $p) => $p->where('preview.rows.0.term', 'sun')->where('preview.rows.0.definition', 'a star'));
-        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect('/words?pool_id='.$this->pool($owner)->id);
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect('/word-pools/'.$this->pool($owner)->id);
         $this->assertDatabaseHas('words', ['user_id' => $owner->id, 'term' => 'sun', 'definition' => 'a star']);
     }
 

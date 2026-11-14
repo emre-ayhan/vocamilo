@@ -31,7 +31,7 @@ class WordPoolController extends Controller
             return $r->user()->wordPools()->create($d);
         });
 
-        return redirect('/words?pool_id='.$p->id);
+        return redirect('/word-pools/'.$p->id);
     }
 
     public function update(Request $r, int $pool)

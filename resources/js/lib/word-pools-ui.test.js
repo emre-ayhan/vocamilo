@@ -11,3 +11,9 @@ test('collection pool selection guards stale results and only changes applied sc
 });
 
 test('CSV commit binds the visible preview nonce and pool, not another tab or a changed target',()=>{const s=page('Import/Index');assert.match(s,/@submit.prevent="commitImport"/);assert.match(s,/pool_id:props.preview.pool_id,preview_id:props.preview.preview_id/);assert.match(s,/!props.preview\?\.preview_id/);assert.match(s,/Number\(form.pool_id\)!==Number\(props.preview.pool_id\)/);assert.doesNotMatch(s,/@submit.prevent="save.post/);});
+test('overview is pool-only cards and create form; detail has canonical scoped search and back link',()=>{
+ const overview=page('Words/Pools'),detail=page('Words/Index');
+ assert.match(overview,/defineProps\(\{pools:/);assert.match(overview,/v-for="\(pool,index\) in pools"/);assert.match(overview,/href="`\/word-pools\/\$\{pool.id\}`"/);assert.match(overview,/pool.words_count/);assert.match(overview,/poolForm.post\('\/word-pools'/);assert.doesNotMatch(overview,/word\.term|word\.definition|words\.data/);
+ assert.match(detail,/router.get\(`\/word-pools\/\$\{props.selectedPool.id\}`,\{search:search.value.trim\(\)\}/);assert.match(detail,/href="\/words"/);assert.doesNotMatch(detail,/choosePool|poolForm.post\('\/word-pools'/);
+ const layout=readFileSync(new URL('../Layouts/AppLayout.vue',import.meta.url),'utf8');assert.match(layout,/active\('\/words'\)\|\|active\('\/word-pools'\)/);
+});

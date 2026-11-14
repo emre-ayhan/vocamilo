@@ -187,13 +187,13 @@ Matching uses `LOWER` on both the database field and bound search term. ASCII ca
 
 ### Named word pools and one-time legacy assignment
 
-Create a named pool with its vocabulary language (for example `pt-PT` or `en-US`). A word can belong to multiple pools without being copied: its definition and owner's note remain one record. Removing it from a pool, or deleting a pool, does not delete the word, collection links, shared memberships, personal notes or study history. A different meaning can be added as a separate word even when the spelling is identical.
+The `/words` page lists pools only. Open a pool to manage its words at `/word-pools/{id}`; old `/words?pool_id=...` links redirect to that pool. Create a named pool with its vocabulary language (for example `pt-PT` or `en-US`). A word can belong to multiple pools without being copied: its definition and owner's note remain one record. Removing it from a pool, or deleting a pool, does not delete the word, collection links, shared memberships, personal notes or study history. A different meaning can be added as a separate word even when the spelling is identical.
 
 CSV preview requires an owned target pool. Matching is confined to that pool; ambiguous duplicate terms are skipped rather than guessed. A unique matching record updates its definition everywhere that same word is reused. Two columns are sufficient. Preview binds the target pool and membership/definition snapshot; changes before confirmation require another preview. Exports are scoped to the selected pool and neutralize spreadsheet formulas.
 
 Migration `2026_11_14_000007_create_word_pools` only adds pool tables and the nullable collection voice-language field. It does not automatically assign existing words or alter sharing links, memberships, consent, notes or results. Existing collection contents continue to work. The pool list may initially be empty until a pool is created and old words are assigned.
 
-For the explicitly chosen existing account only, first create its desired pool in the application, then use its exact email and pool ID (visible in `/words?pool_id=...`). Back up the database before migration or applying the one-time assignment. Run the preview:
+For the explicitly chosen existing account only, first create its desired pool in the application, then use its exact email and pool ID (visible in `/word-pools/POOL_ID`). Back up the database before migration or applying the one-time assignment. Run the preview:
 
 ```bash
 php artisan vocamilo:assign-legacy-words 'EXACT_ACCOUNT_EMAIL' POOL_ID

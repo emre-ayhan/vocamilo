@@ -28,13 +28,25 @@ class VocabularyController extends Controller
 
     public function index(Request $r)
     {
-        $d = $r->validate(['search' => 'nullable|string|max:200', 'pool_id' => 'nullable|integer|min:1']);
-        $search = trim($d['search'] ?? '');
-        $pools = $r->user()->wordPools()->withCount('words')->orderBy('name')->get();
-        $pool = isset($d['pool_id']) ? $r->user()->wordPools()->findOrFail($d['pool_id']) : $pools->first();
-        $words = $r->user()->words()->when($pool, fn ($q) => $q->whereHas('pools', fn ($q) => $q->where('word_pools.id', $pool->id)), fn ($q) => $q->whereRaw('1 = 0'));
+        $d = $r->validate(['search' => 'nullable|string|max:200', 'pool_id' => 'nullable|integer|min:1', 'page' => 'nullable|integer|min:1']);
+        if (isset($d['pool_id'])) {
+            $pool = $r->user()->wordPools()->findOrFail($d['pool_id']);
+            $query = array_intersect_key($d, array_flip(['search', 'page']));
 
-        return Inertia::render('Words/Index', ['words' => $words->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->where('term', 'like', '%'.$search.'%')->orWhere('definition', 'like', '%'.$search.'%')))->latest()->paginate(30)->withQueryString(), 'pools' => $pools, 'selectedPool' => $pool, 'filters' => ['search' => $search, 'pool_id' => $pool?->id]]);
+            return redirect('/word-pools/'.$pool->id.($query ? '?'.http_build_query($query) : ''));
+        }
+
+        return Inertia::render('Words/Pools', ['pools' => $r->user()->wordPools()->withCount('words')->orderBy('name')->get(['id', 'name', 'language'])]);
+    }
+
+    public function pool(Request $r, int $pool)
+    {
+        $selected = $r->user()->wordPools()->findOrFail($pool);
+        $d = $r->validate(['search' => 'nullable|string|max:200', 'page' => 'nullable|integer|min:1']);
+        $search = trim($d['search'] ?? '');
+        $words = $r->user()->words()->whereHas('pools', fn ($q) => $q->where('word_pools.id', $selected->id));
+
+        return Inertia::render('Words/Index', ['words' => $words->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->where('term', 'like', '%'.$search.'%')->orWhere('definition', 'like', '%'.$search.'%')))->latest()->paginate(30)->withQueryString(), 'pools' => $r->user()->wordPools()->withCount('words')->orderBy('name')->get(), 'selectedPool' => $selected, 'filters' => ['search' => $search, 'pool_id' => $selected->id]]);
     }
 
     public function store(Request $r)
