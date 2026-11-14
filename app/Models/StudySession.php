@@ -31,6 +31,7 @@ class StudySession extends Model
     public static function summaryFor(Collection $collection, ?int $learnerId = null): array
     {
         $query = self::where('collection_id', $collection->id)->where('user_id', $learnerId ?? $collection->user_id)->whereNotNull('completed_at');
+        $collectionWordCount = $collection->words()->count();
         $modes = [];
         foreach (['flashcards', 'study', 'test'] as $mode) {
             $q = (clone $query)->where('mode', $mode);
@@ -50,7 +51,7 @@ class StudySession extends Model
                 ->get(['a.word_id', 'a.correct'])->unique('word_id');
             $latestPracticed = $latestAnswers->count();
             $latestCorrect = $latestAnswers->filter(fn ($answer) => (bool) $answer->correct)->count();
-            $modes[$mode] = ['latest_practiced' => $latestPracticed, 'latest_correct' => $latestCorrect, 'latest_percent' => $latestPracticed ? (int) round($latestCorrect / $latestPracticed * 100) : 0, 'count' => $q->count(), 'total_practiced' => (int) (clone $q)->sum('total_count'), 'total_correct' => (int) (clone $q)->sum('correct_count'), 'last' => $last?->result(), 'best_percent' => $mode === 'test' ? (clone $q)->selectRaw('MAX(100.0 * correct_count / total_count) as best')->value('best') : null];
+            $modes[$mode] = ['latest_practiced' => $latestPracticed, 'latest_correct' => $latestCorrect, 'collection_word_count' => $collectionWordCount, 'latest_percent' => $collectionWordCount ? (int) round($latestCorrect / $collectionWordCount * 100) : null, 'count' => $q->count(), 'total_practiced' => (int) (clone $q)->sum('total_count'), 'total_correct' => (int) (clone $q)->sum('correct_count'), 'last' => $last?->result(), 'best_percent' => $mode === 'test' ? (clone $q)->selectRaw('MAX(100.0 * correct_count / total_count) as best')->value('best') : null];
         }
 
         return ['total_sessions' => $query->count(), 'modes' => $modes, 'recent' => (clone $query)->orderByDesc('completed_at')->orderByDesc('id')->limit(10)->get()->map(fn ($s) => $s->result())->all()];

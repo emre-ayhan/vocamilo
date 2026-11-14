@@ -392,5 +392,8 @@ export default {
   "Latest correct answers": "Últimas respostas corretas",
   "Latest word success: {percent}%": "Sucesso mais recente por palavra: {percent}%",
   "Each current collection word counts once, using your latest completed first attempt in that mode. Unpracticed words and automatic retries are excluded. Flashcards use your latest known mark; Study can include accepted equivalent definitions. Missing historical word records cannot be reconstructed.": "Cada palavra atual da coleção conta uma vez, usando a primeira tentativa da sua sessão concluída mais recente nesse modo. Palavras não praticadas e repetições automáticas são excluídas. Flashcards usa a sua última marcação; Study pode incluir definições equivalentes aceites. Registos históricos em falta por palavra não podem ser reconstruídos.",
-  "Start {mode}": "Começar {mode}"
+  "Start {mode}": "Começar {mode}",
+  "No words in this collection": "Esta coleção não tem palavras",
+  "Collection words": "Palavras na coleção",
+  "Success is your latest correct or known first attempts divided by all current collection words, including unpracticed words. Automatic retries do not change the first result. Empty collections show no percentage. Missing historical word records cannot be reconstructed.": "O sucesso corresponde às suas últimas primeiras tentativas corretas ou marcadas como conhecidas, dividido por todas as palavras atuais da coleção, incluindo as não praticadas. As repetições automáticas não alteram o primeiro resultado. Coleções vazias não mostram percentagem. Registos históricos em falta por palavra não podem ser reconstruídos."
 };

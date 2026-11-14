@@ -32,7 +32,7 @@ class LatestWordSummaryTest extends TestCase
         $s->answers()->create(['word_id' => $w->id, 'position' => 0, 'attempt_no' => $attempt, 'prompt' => $w->definition, 'expected' => $w->term, 'answer' => $correct ? $w->term : 'wrong', 'correct' => $correct]);
     }
 
-    public function test_latest_first_attempt_replaces_old_result_and_ignores_retries_and_unseen_words(): void
+    public function test_latest_first_attempt_replaces_old_result_and_ignores_retries_but_counts_unseen_words(): void
     {
         [$u,$c,$w] = $this->fixture();
         $this->record($u, $c, $w[0], false, 'study', 5);
@@ -43,7 +43,7 @@ class LatestWordSummaryTest extends TestCase
         $m = StudySession::summaryFor($c)['modes']['study'];
         $this->assertSame(2, $m['latest_practiced']);
         $this->assertSame(1, $m['latest_correct']);
-        $this->assertSame(50, $m['latest_percent']);
+        $this->assertSame(25, $m['latest_percent']);
     }
 
     public function test_learner_collection_mode_and_completed_scope_are_independent(): void
@@ -66,7 +66,7 @@ class LatestWordSummaryTest extends TestCase
         $this->assertSame(1, StudySession::summaryFor($c, $member->id)['modes']['study']['latest_correct']);
     }
 
-    public function test_deleted_detached_and_unrecorded_words_do_not_enter_denominator(): void
+    public function test_deleted_and_detached_words_leave_denominator_but_unrecorded_words_remain(): void
     {
         [$u,$c,$w] = $this->fixture();
         foreach (array_slice($w, 0, 3) as $word) {
@@ -76,7 +76,7 @@ class LatestWordSummaryTest extends TestCase
         $w[1]->delete();
         $m = StudySession::summaryFor($c)['modes']['study'];
         $this->assertSame(1, $m['latest_practiced']);
-        $this->assertSame(100, $m['latest_percent']);
+        $this->assertSame(50, $m['latest_percent']);
         $c->words()->detach($w[2]);
         $m = StudySession::summaryFor($c)['modes']['study'];
         $this->assertSame(0, $m['latest_practiced']);
@@ -93,9 +93,43 @@ class LatestWordSummaryTest extends TestCase
         // Legacy answer omits both attempt_no and question_index, using migration defaults.
         $s->answers()->create(['word_id' => $w[1]->id, 'position' => 0, 'prompt' => 'meaning', 'expected' => 'word', 'answer' => 'wrong', 'correct' => false]);
         $m = StudySession::summaryFor($c)['modes']['study'];
-        $this->assertSame(2,$m['latest_practiced']);
-        $this->assertSame(1,$m['latest_correct']);
-        $this->assertSame(50,$m['latest_percent']);
-        $this->assertSame(0,StudySession::summaryFor($c)['modes']['test']['latest_practiced']);
+        $this->assertSame(2, $m['latest_practiced']);
+        $this->assertSame(1, $m['latest_correct']);
+        $this->assertSame(25, $m['latest_percent']);
+        $this->assertSame(0, StudySession::summaryFor($c)['modes']['test']['latest_practiced']);
+    }
+
+    public function test_collection_size_changes_denominator_and_empty_collection_has_no_percentage(): void
+    {
+        [$u, $c, $words] = $this->fixture();
+        foreach (['study', 'test', 'flashcards'] as $mode) {
+            $this->record($u, $c, $words[0], true, $mode);
+        }
+        foreach (StudySession::summaryFor($c)['modes'] as $mode) {
+            $this->assertSame(4, $mode['collection_word_count']);
+            $this->assertSame(25, $mode['latest_percent']);
+        }
+        $new = $u->words()->create(['term' => 'unseen', 'definition' => 'new']);
+        $c->words()->attach($new);
+        foreach (StudySession::summaryFor($c)['modes'] as $mode) {
+            $this->assertSame(5, $mode['collection_word_count']);
+            $this->assertSame(20, $mode['latest_percent']);
+            $this->assertSame(1, $mode['latest_practiced']);
+        }
+        $member = User::factory()->create();
+        foreach (StudySession::summaryFor($c, $member->id)['modes'] as $mode) {
+            $this->assertSame(5, $mode['collection_word_count']);
+            $this->assertSame(0, $mode['latest_percent']);
+        }
+        $c->words()->detach($new);
+        foreach (StudySession::summaryFor($c)['modes'] as $mode) {
+            $this->assertSame(25, $mode['latest_percent']);
+        }
+        $c->words()->detach();
+        foreach (StudySession::summaryFor($c)['modes'] as $mode) {
+            $this->assertSame(0, $mode['collection_word_count']);
+            $this->assertSame(0, $mode['latest_correct']);
+            $this->assertNull($mode['latest_percent']);
+        }
     }
 }

@@ -93,5 +93,8 @@ test('guest and summary share icons; count and gradient circle align in one head
  assert.match(summary,/<ModeIcon :mode="mode"/);
  assert.match(summary,/mode-title-group/);
  assert.match(summary,/class="mode-completed"/);
- for(const mode of ['flashcards','study','test'])assert.ok(summary.includes('.history-mode--'+mode+' .history-start,.history-mode--'+mode+' .mode-percentage{background:linear-gradient'));
+ assert.match(summary,/class="mode-metrics"/);
+ assert.match(summary,/class="percentage-splash"/);
+ assert.match(summary,/collection_word_count/);
+ assert.match(summary,/linearGradient/);
 });
