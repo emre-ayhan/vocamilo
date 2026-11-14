@@ -106,3 +106,9 @@ The header EN | PT switch uses European Portuguese for interface text, not user-
 Authenticated users can export their own pool or an accessible collection as UTF-8 CSV with `term,definition,note` columns. Collection exports contain only the requesting learner's notes. Spreadsheet-dangerous cells are prefixed with an apostrophe for safety, which may remain visible when imported into other software. Exports are private downloads, never public stored files. The sidebar Import item is removed; Import CSV remains available from the word pool.
 
 Upgrade: back up the database, pull this version, run `php artisan migrate --force`, rebuild assets with `npm run build`, and clear compiled views/config according to your deployment process. This version adds collection memberships/private notes, attachment ordering and a nullable user locale. No worker or new credentials are needed. Rolling back these migrations removes memberships, private member notes and locale preferences.
+
+## Install-only PWA
+
+The web manifest and branded icons let supported browsers install Vocamilo as a standalone app over HTTPS. Use the sidebar “Install Vocamilo” button when an install prompt is available, or the browser's install menu. On iPhone/iPad use Safari → Share → Add to Home Screen. Browser support, engagement requirements and UI vary; a button cannot force installation. Real-device installation and Google sign-in in the installed app must be tested on the deployed HTTPS host.
+
+This version intentionally registers **no service worker**, enables no offline mode or push notifications, and adds no Cache Storage/IndexedDB copies of private pages or answers. Normal login/session handling is unchanged. An internet connection is required. Static manifest and app icons contain no user information. See [MDN installability guidance](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable).

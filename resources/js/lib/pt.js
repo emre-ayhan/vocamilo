@@ -337,5 +337,8 @@ export default {
   "The account-linking session expired. Start Google sign-in again.": "A sessão de associação de contas expirou. Inicie sessão com Google novamente.",
   "The password does not match your existing Vocamilo account.": "A palavra-passe não corresponde à sua conta Vocamilo atual.",
   "This Google identity is already linked. Please start again.": "Esta identidade Google já está associada. Comece novamente.",
-  "Your account changed during linking. Please start again.": "A conta mudou durante a associação. Comece novamente."
+  "Your account changed during linking. Please start again.": "A conta mudou durante a associação. Comece novamente.",
+  "Install Vocamilo": "Instalar Vocamilo",
+  "Use your browser’s Install app option. On iPhone or iPad, open Safari, tap Share, then Add to Home Screen.": "Utilize a opção Instalar aplicação do navegador. No iPhone ou iPad, abra o Safari, toque em Partilhar e depois em Adicionar ao ecrã principal.",
+  "An internet connection is required. No notifications or offline storage are enabled.": "É necessária uma ligação à Internet. Não são ativadas notificações nem armazenamento offline."
 };
