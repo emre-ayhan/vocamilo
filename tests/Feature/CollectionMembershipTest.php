@@ -172,11 +172,13 @@ class CollectionMembershipTest extends TestCase
         $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $word->update(['term' => '=HYPERLINK("https://evil.example")', 'definition' => " \t+SUM(1,2)", 'note' => '@OWNER']);
         $this->actingAs($member)->put('/collections/'.$c->id.'/words/'.$word->id.'/note', ['note' => '-MEMBER'])->assertRedirect();
-        $memberCsv = $this->get('/collections/'.$c->id.'/export')->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff')->streamedContent();
-        $rows = $this->csvRows($memberCsv);
+        $this->get('/collections/'.$c->id.'/export')->assertNotFound();
+        $collectionCsv = $this->actingAs($owner)->get('/collections/'.$c->id.'/export')->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff')->streamedContent();
+        $rows = $this->csvRows($collectionCsv);
         $this->assertSame(['term', 'definition', 'note'], $rows[0]);
-        $this->assertSame(["'".$word->term, "'".$word->definition, "'-MEMBER"], $rows[1]);
-        $this->assertStringNotContainsString('OWNER', $memberCsv);
+        $this->assertSame(["'".$word->term, "'".$word->definition, "'@OWNER"], $rows[1]);
+        $this->assertStringNotContainsString('MEMBER', $collectionCsv);
+        $this->actingAs($member);
         $memberPool = $member->wordPools()->create(['name' => 'Own empty pool', 'language' => 'en']);
         $ownerPool = $owner->wordPools()->create(['name' => 'Own words', 'language' => 'en']);
         $ownerPool->words()->attach($word);

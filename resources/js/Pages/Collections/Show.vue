@@ -106,7 +106,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
     <Head :title="collection.title" />
     <AppLayout :title="collection.title" :subtitle="collection.description" :shared="shared">
         <template #actions><div class="actions"><button v-if="!shared&&!owner" type="button" class="button secondary" :disabled="leave.processing" @click="leaveCollection">{{t('Leave collection')}}</button><Link v-if="!shared&&!owner" :href="`/collections/${collection.id}/consent`" class="button secondary">{{t('Progress sharing choices')}}</Link>
-            <button class="button secondary" @click="openVoice">{{t('Voice settings')}}</button><a v-if="!shared" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
+            <button class="button secondary" @click="openVoice">{{t('Voice settings')}}</button><a v-if="owner" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
             <button v-if="owner" class="button secondary" @click="voiceDraft=voiceMemory.read();showEdit = true">{{ t('Edit collection') }}</button>
             <span v-else class="pill dark">{{ t(shared ? 'SHARED COLLECTION' : 'SHARED WITH ME') }}</span>
         </div></template>

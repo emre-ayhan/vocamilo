@@ -58,9 +58,10 @@ class MemberProgressConsentTest extends TestCase
         [, $member,$c,$w] = $this->fixture();
         $c->members()->attach($member);
         $this->actingAs($member)->get('/collections/'.$c->id)->assertRedirect('/collections/'.$c->id.'/consent');
-        foreach (['/words', '/export', '/study', '/words/'.$w->id.'/note'] as $suffix) {
+        foreach (['/words', '/study', '/words/'.$w->id.'/note'] as $suffix) {
             $this->getJson('/collections/'.$c->id.$suffix)->assertForbidden()->assertJsonPath('needs_consent', true);
         }
+        $this->getJson('/collections/'.$c->id.'/export')->assertNotFound();
         $this->putJson('/collections/'.$c->id.'/words/'.$w->id.'/note', ['note' => 'no'])->assertForbidden();
         $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study'])->assertForbidden();
         $this->postJson('/collections/'.$c->id.'/sessions/'.Str::uuid().'/complete', ['answers' => []])->assertForbidden();

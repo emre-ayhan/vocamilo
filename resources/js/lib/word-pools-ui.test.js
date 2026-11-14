@@ -17,3 +17,13 @@ test('overview is pool-only cards and create form; detail has canonical scoped s
  assert.match(detail,/router.get\(`\/word-pools\/\$\{props.selectedPool.id\}`,\{search:search.value.trim\(\)\}/);assert.match(detail,/href="\/words"/);assert.doesNotMatch(detail,/choosePool|poolForm.post\('\/word-pools'/);
  const layout=readFileSync(new URL('../Layouts/AppLayout.vue',import.meta.url),'utf8');assert.match(layout,/active\('\/words'\)\|\|active\('\/word-pools'\)/);
 });
+
+test('pool export is retained once, collection export is owner-only and language toolbar has space',()=>{
+ const detail=readFileSync(new URL('../Pages/Words/Index.vue',import.meta.url),'utf8');
+ const collection=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
+ assert.equal((detail.match(/\/words\/export\?pool_id=/g)||[]).length,1);
+ assert.match(collection,/<a v-if="owner" :href="`\/collections\/\$\{collection.id\}\/export`"/);
+ assert.match(detail,/\.pool-toolbar\{[^}]*gap:20px/);
+ assert.match(detail,/min-height:44px/);
+ assert.match(detail,/@media\(max-width:600px\)\{\.pool-toolbar \.actions,\.form-actions\{flex-direction:column;align-items:stretch/);
+});

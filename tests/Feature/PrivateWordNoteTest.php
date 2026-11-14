@@ -46,9 +46,10 @@ class PrivateWordNoteTest extends TestCase
         $this->getJson('/collections/'.$b->id.'/words')->assertJsonPath('data.0.note', 'my private note');
         $s = $this->postJson('/collections/'.$b->id.'/sessions', ['mode' => 'flashcards', 'settings' => ['type' => 'choice', 'direction' => 'term', 'order' => 'ordered', 'count' => 1]])->assertCreated()->json();
         $this->assertSame('my private note', $s['questions'][0]['note']);
-        $csv = $this->get('/collections/'.$b->id.'/export')->assertOk()->streamedContent();
-        $this->assertStringContainsString('my private note', $csv);
-        $this->assertStringNotContainsString('owner secret', $csv);
+        $this->get('/collections/'.$b->id.'/export')->assertNotFound();
+        $csv = $this->actingAs($owner)->get('/collections/'.$b->id.'/export')->assertOk()->streamedContent();
+        $this->assertStringContainsString('owner secret', $csv);
+        $this->assertStringNotContainsString('my private note', $csv);
         $this->actingAs($other)->getJson($this->url($b, $w))->assertExactJson(['note' => null]);
         $this->actingAs($owner)->getJson($this->url($b, $w))->assertExactJson(['note' => 'owner secret']);
         $this->actingAs($member)->putJson($this->url($b, $w), ['note' => null])->assertOk();

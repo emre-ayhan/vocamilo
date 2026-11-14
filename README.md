@@ -212,3 +212,5 @@ Collection voice language is a suggestion preference, not a translation. The per
 Joined users can leave a collection after confirmation. This removes membership and the owner's access to their shared progress, but retains private notes and historical results. An active public link may still allow guest viewing. Rejoining requires fresh current consent; retained history can then be visible again under that consent.
 
 Deploy with a database backup and a short maintenance window: `php artisan down`, `git pull --ff-only`, `php artisan migrate --force`, `npm run build`, `php artisan optimize:clear`, then `php artisan up`. Perform the explicit one-account assignment separately after creating the target pool. No background worker is required.
+
+Collection CSV downloads are owner-only. Joined users, guests and administrators who do not own the collection cannot export it. The word-pool detail page retains its CSV export action, scoped to that pool’s owner.
