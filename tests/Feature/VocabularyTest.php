@@ -209,11 +209,11 @@ class VocabularyTest extends TestCase
         $this->word($owner, 'bright');
         $c = $this->collection($owner);
         $csv = UploadedFile::fake()->createWithContent('words.csv', "term,definition\nbright,full of light\nsun,a star\nsun,a star\n");
-        $this->actingAs($owner)->post('/imports/preview', ['file' => $csv, 'has_header' => true])->assertInertia(fn (Assert $p) => $p->component('Import/Index')->where('preview.total', 1)->where('preview.duplicates', 2));
+        $this->actingAs($owner)->post('/imports/preview', ['file' => $csv, 'has_header' => true])->assertInertia(fn (Assert $p) => $p->component('Import/Index')->where('preview.total', 2)->where('preview.duplicates', 2));
         $this->assertDatabaseCount('words', 1);
         $this->post('/imports/store', ['collection_id' => $c->id])->assertRedirect('/collections/'.$c->id);
         $this->assertDatabaseCount('words', 2);
-        $this->assertSame('sun', $c->words()->firstOrFail()->term);
+        $this->assertEqualsCanonicalizing(['bright', 'sun'], $c->words()->pluck('term')->all());
         $this->post('/imports/store')->assertUnprocessable();
         $this->assertDatabaseCount('words', 2);
     }
@@ -231,7 +231,7 @@ class VocabularyTest extends TestCase
     {
         $owner = User::factory()->create();
         $foreign = $this->collection(User::factory()->create());
-        $this->actingAs($owner)->withSession(['csv_preview' => ['user_id' => $owner->id, 'rows' => [['term' => 'sun', 'definition' => 'a star']], 'expires_at' => time() + 60]])->post('/imports/store', ['collection_id' => $foreign->id])->assertNotFound();
+        $this->actingAs($owner)->withSession(['csv_preview' => ['version' => 2, 'user_id' => $owner->id, 'rows' => [['term' => 'sun', 'definition' => 'a star']], 'expires_at' => time() + 60]])->post('/imports/store', ['collection_id' => $foreign->id])->assertNotFound();
         $this->assertDatabaseCount('words', 0);
     }
 
@@ -240,7 +240,7 @@ class VocabularyTest extends TestCase
         $owner = User::factory()->create();
         $other = User::factory()->create();
         $rows = [['term' => 'sun', 'definition' => 'a star']];
-        $this->actingAs($owner)->withSession(['csv_preview' => ['user_id' => $owner->id, 'rows' => $rows, 'expires_at' => time() - 1]])->post('/imports/store')->assertUnprocessable();
+        $this->actingAs($owner)->withSession(['csv_preview' => ['version' => 2, 'user_id' => $owner->id, 'rows' => $rows, 'expires_at' => time() - 1]])->post('/imports/store')->assertUnprocessable();
         $this->withSession(['csv_preview' => ['user_id' => $other->id, 'rows' => $rows, 'expires_at' => time() + 60]])->post('/imports/store')->assertUnprocessable();
         $this->assertDatabaseCount('words', 0);
     }

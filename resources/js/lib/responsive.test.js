@@ -98,3 +98,10 @@ test('guest and summary share icons; count and gradient circle align in one head
  assert.match(summary,/collection_word_count/);
  assert.match(summary,/linearGradient/);
 });
+
+test('detailed splash stays beside title above word totals',()=>{
+ const s=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
+ assert.ok(s.indexOf('class="mode-percentage"')<s.indexOf('class="mode-metrics"'));
+ assert.match(s,/stroke-opacity="\.28"/);
+ assert.match(s,/<circle cx="92"/);
+});

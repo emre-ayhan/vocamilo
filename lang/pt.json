@@ -399,5 +399,16 @@
   "Your note could not be loaded or saved. Check your access and connection, then try again.": "Não foi possível carregar ou guardar a sua nota. Verifique o acesso e a ligação e tente novamente.",
   "Your note is private and follows this word across your collections.": "A sua nota é privada e acompanha esta palavra nas suas coleções.",
   "Retry": "Tentar novamente",
-  "Saving…": "A guardar…"
+  "Saving…": "A guardar…",
+  "A matching word updates its definition. Your private notes and collection links are preserved.": "Uma palavra correspondente atualiza a definição. As suas notas privadas e ligações às coleções são preservadas.",
+  "Matching ignores letter case and surrounding spaces, but keeps accents. Ambiguous matches are skipped with a warning.": "A correspondência ignora maiúsculas e espaços nas extremidades, mas mantém os acentos. Correspondências ambíguas são ignoradas com um aviso.",
+  "{created} new · {updated} updated · {skipped} skipped": "{created} novas · {updated} atualizadas · {skipped} ignoradas",
+  "Skipped rows need your review": "Reveja as linhas ignoradas",
+  "Action": "Ação",
+  "Update definition": "Atualizar definição",
+  "Keep existing": "Manter existente",
+  "Create word": "Criar palavra",
+  "Conflicting definitions for this term in the CSV. All its rows were skipped.": "Existem definições diferentes para esta palavra no CSV. Todas as suas linhas foram ignoradas.",
+  "More than one word in your pool matches this term. Its CSV rows were skipped.": "Mais de uma palavra no seu banco corresponde a este termo. As respetivas linhas do CSV foram ignoradas.",
+  "Your word pool changed after preview. Upload the CSV again before importing.": "O seu banco de palavras mudou após a pré-visualização. Carregue o CSV novamente antes de importar."
 }
