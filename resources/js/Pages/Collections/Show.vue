@@ -105,5 +105,5 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
 
 <style scoped>
 .mode-card{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}.guest-mode-copy{min-width:0}.guest-mode-copy h3{display:flex;align-items:center;gap:8px;margin:0 0 10px}.guest-mode-copy p{margin:0}.guest-mode-copy :deep(.mode-icon){flex-shrink:0}.mode-card .guest-start{align-self:center;flex-shrink:0;justify-content:center;gap:8px;min-width:112px;min-height:44px;padding:12px 20px;font-size:14px;margin-top:0}
-.guest-mode-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}.mode-card .guest-start{min-width:100px}@media(max-width:360px){.mode-card{padding:18px;gap:10px}.mode-card .guest-start{min-width:84px;padding:10px 12px}}
+.guest-mode-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}.mode-card .guest-start{min-width:100px}@media(max-width:760px){.guest-mode-grid{grid-template-columns:1fr}}@media(max-width:360px){.mode-card{padding:18px;gap:10px}.mode-card .guest-start{min-width:84px;padding:10px 12px}}
 </style>
