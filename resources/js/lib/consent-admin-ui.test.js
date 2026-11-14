@@ -15,3 +15,11 @@ test('admin UI has no role assignment or destructive account/collection deletion
  const users=page('Admin/Users');assert.match(users,/!user.is_admin&&user.id!==page.props.auth\?\.user\?\.id/);assert.doesNotMatch(users,/v-model="[^"\n]*is_admin|form.delete/);
  const collection=page('Admin/Collection');assert.match(collection,/word.term/);assert.match(collection,/word.definition/);assert.doesNotMatch(collection,/word.note|word\.personal|form.delete/);assert.match(collection,/sharing.delete\(`\/admin\/collections\/\$\{props.collection.id\}\/sharing`/);
 });
+
+test('administrator consent checkbox is theme-colored and vertically centered beside its wrapping label',()=>{
+ const s=page('Account/Disclosure');
+ assert.match(s,/required\/><span>\{\{t\('I understand and agree to this administrator access\.'\)\}\}<\/span>/);
+ assert.match(s,/flex-direction:row;align-items:center/);
+ assert.match(s,/width:18px;height:18px;margin:0;flex:0 0 18px;accent-color:var\(--teal,#157e73\)/);
+ assert.match(s,/input:focus-visible\{outline:3px solid #45baa8/);
+});
