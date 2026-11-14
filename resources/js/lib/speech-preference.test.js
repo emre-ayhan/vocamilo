@@ -51,3 +51,35 @@ test('collection forms keep voice outside server form data and save only through
  assert.match(picker,/localVoices\(synthesis\)/);
  assert.match(picker,/addEventListener\('voiceschanged',refresh\)/);
 });
+
+test('guest voice never transfers into signed-in owner or member scopes',()=>{
+ const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
+ const collection={id:31,share_uuid:'public-uuid'};
+ voicePreference(storage,31,'guest').write('legacy-guest');
+ collectionVoicePreference(storage,collection,'guest',true).write('guest-voice');
+ for(const user of [1,2]){
+  assert.equal(collectionVoicePreference(storage,collection,user,true).read(),'');
+  assert.equal(collectionVoicePreference(storage,collection,user,false).read(),'');
+ }
+ collectionVoicePreference(storage,collection,1,true).write('member-voice');
+ assert.equal(collectionVoicePreference(storage,collection,2,true).read(),'');
+ assert.equal(collectionVoicePreference(storage,collection,'guest',true).read(),'guest-voice');
+ collectionVoicePreference(storage,collection,1,true).write('');
+ assert.equal(collectionVoicePreference(storage,collection,'guest',true).read(),'guest-voice');
+});
+test('voice is browser local; public link rotation does not inherit the old shared selection',()=>{
+ const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};
+ collectionVoicePreference(storage,{id:31,share_uuid:'old'},'guest',true).write('voice');
+ assert.equal(collectionVoicePreference(storage,{id:31,share_uuid:'new'},'guest',true).read(),'');
+ const otherBrowser={getItem:()=>null,setItem(){}};
+ assert.equal(collectionVoicePreference(otherBrowser,{id:31,share_uuid:'old'},'guest',true).read(),'');
+});
+test('public UI allows only personal voice changes and never persists guest notes/results',()=>{
+ const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
+ const session=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+ assert.match(show,/function saveVoice\(\)\{if\(persistVoice\(voiceDraft.value\)\)showVoice.value=false;/);
+ assert.match(show,/v-if="owner" class="button secondary"/);
+ assert.match(show,/v-if="showEdit && owner"/);
+ assert.match(session,/<FlashcardNote v-if="!shared"/);
+ assert.match(session,/if\(props.shared\|\|busy.value\|\|saveState.value==='saved'\)return/);
+});
