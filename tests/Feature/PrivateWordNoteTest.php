@@ -24,7 +24,7 @@ class PrivateWordNoteTest extends TestCase
             $c = $owner->collections()->create(['title' => $title]);
             $c->forceFill(['share_uuid' => (string) Str::uuid()])->save();
             $c->words()->attach($word);
-            $c->members()->attach([$member->id, $other->id], ['progress_consented_at' => now()]);
+            $c->members()->attach([$member->id, $other->id], ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
             $collections[] = $c;
         }
 

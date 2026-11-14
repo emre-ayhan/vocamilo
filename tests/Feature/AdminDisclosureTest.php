@@ -181,7 +181,7 @@ class AdminDisclosureTest extends TestCase
         $this->actingAs($admin)->get('/s/'.$c->share_uuid)->assertOk()->assertDontSee('OWNER_NOTE_SECRET');
         $this->assertDatabaseHas('admin_audit_logs', ['actor_id' => $admin->id, 'collection_id' => $c->id, 'action' => 'collection_learner_request']);
         $this->assertStringNotContainsString($c->share_uuid, DB::table('admin_audit_logs')->get()->toJson());
-        $c->members()->attach($admin, ['progress_consented_at' => now()]);
+        $c->members()->attach($admin, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $this->get('/collections')->assertInertia(fn (Assert $p) => $p->has('collections', 1));
         $owner->forceFill(['admin_disclosure_version' => null, 'admin_disclosure_accepted_at' => null])->save();
         $this->get('/collections')->assertInertia(fn (Assert $p) => $p->has('collections', 0));

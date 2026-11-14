@@ -23,3 +23,9 @@ test('administrator consent checkbox is theme-colored and vertically centered be
  assert.match(s,/width:18px;height:18px;margin:0;flex:0 0 18px;accent-color:var\(--teal,#157e73\)/);
  assert.match(s,/input:focus-visible\{outline:3px solid #45baa8/);
 });
+test('member consent explicitly covers email inference with versioned unchecked acceptance and aligned theme checkbox',()=>{
+ const s=page('Collections/Consent');assert.match(s,/consentVersion:Number/);assert.match(s,/consent_version:props.consentVersion/);assert.match(s,/progress_consent:false/);
+ assert.match(s,/all or part of an email address/);assert.match(s,/matching results can reveal or confirm/);
+ assert.match(s,/required\/><span>/);assert.match(s,/flex-direction:row;align-items:center/);assert.match(s,/width:18px;height:18px/);assert.match(s,/accent-color:var\(--teal/);
+ assert.match(page('Collections/Progress'),/Search accounts by name or email/);
+});

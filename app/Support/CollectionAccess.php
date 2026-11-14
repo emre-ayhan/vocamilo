@@ -13,7 +13,7 @@ class CollectionAccess
     public static function finishPendingJoin(Request $r): ?RedirectResponse
     {
         if ($r->user()?->suspended_at) {
-            $r->session()->forget(['pending_collection_uuid', 'pending_collection_progress_consent', 'pending_collection_consent_expires_at']);
+            $r->session()->forget(['pending_collection_uuid', 'pending_collection_progress_consent', 'pending_collection_consent_expires_at', 'pending_collection_consent_version']);
 
             return redirect('/dashboard');
         }
@@ -23,7 +23,8 @@ class CollectionAccess
         $uuid = $r->session()->pull('pending_collection_uuid');
         $accepted = $r->session()->pull('pending_collection_progress_consent') === true;
         $expires = $r->session()->pull('pending_collection_consent_expires_at');
-        $consented = $accepted && is_int($expires) && $expires > now()->timestamp;
+        $version = $r->session()->pull('pending_collection_consent_version');
+        $consented = $version === Collection::PROGRESS_CONSENT_VERSION && $accepted && is_int($expires) && $expires > now()->timestamp;
         if (! $r->user() || ! is_string($uuid) || ! Str::isUuid($uuid)) {
             return null;
         }
@@ -38,7 +39,7 @@ class CollectionAccess
                 return null;
             }
             if ($c->user_id !== $r->user()->id) {
-                $c->members()->syncWithoutDetaching([$r->user()->id => ['progress_consented_at' => now()]]);
+                $c->members()->syncWithoutDetaching([$r->user()->id => ['progress_consented_at' => now(), 'progress_consent_version' => Collection::PROGRESS_CONSENT_VERSION]]);
             }
 
             return $c->id;

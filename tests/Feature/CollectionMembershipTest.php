@@ -36,7 +36,7 @@ class CollectionMembershipTest extends TestCase
     public function test_guest_join_survives_registration_and_creates_no_copy(): void
     {
         [$owner, , $c] = $this->fixture();
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/login')->assertSessionHas('pending_collection_uuid', $c->share_uuid);
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/login')->assertSessionHas('pending_collection_uuid', $c->share_uuid);
         $this->post('/register', ['name' => 'New member', 'email' => 'new@example.com', 'password' => 'strong-password-123', 'password_confirmation' => 'strong-password-123'])->assertRedirect('/account/disclosure');
         $this->post('/account/disclosure', ['accepted' => true])->assertRedirect('/collections/'.$c->id)->assertSessionMissing('pending_collection_uuid');
         $member = User::where('email', 'new@example.com')->firstOrFail();
@@ -50,11 +50,11 @@ class CollectionMembershipTest extends TestCase
     {
         [, $member, $c] = $this->fixture();
         $member->update(['password' => 'strong-password-123']);
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/login');
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/login');
         $this->post('/login', ['email' => $member->email, 'password' => 'wrong-password'])->assertSessionHasErrors('email');
         $this->assertFalse($c->members()->whereKey($member->id)->exists());
         $this->post('/login', ['email' => $member->email, 'password' => 'strong-password-123'])->assertRedirect('/collections/'.$c->id);
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/collections/'.$c->id);
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/collections/'.$c->id);
         $this->assertSame(1, $c->members()->count());
     }
 
@@ -67,7 +67,7 @@ class CollectionMembershipTest extends TestCase
         $driver->shouldReceive('enablePKCE')->once()->andReturnSelf();
         $driver->shouldReceive('user')->once()->andReturn($google);
         Socialite::shouldReceive('driver')->once()->with('google')->andReturn($driver);
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'next' => 'https://evil.example'])->assertRedirect('/login');
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2, 'next' => 'https://evil.example'])->assertRedirect('/login');
         $this->get('/auth/google/callback?next=https://evil.example')->assertRedirect('/account/disclosure');
         $this->post('/account/disclosure', ['accepted' => true])->assertRedirect('/collections/'.$c->id);
         $this->assertTrue($c->members()->where('email', 'new@gmail.com')->exists());
@@ -77,7 +77,7 @@ class CollectionMembershipTest extends TestCase
     {
         [, $member, $c] = $this->fixture();
         $this->post('/s/not-a-uuid/join')->assertNotFound();
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/login');
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/login');
         $c->forceFill(['share_uuid' => null])->save();
         $member->update(['password' => 'strong-password-123']);
         $this->post('/login', ['email' => $member->email, 'password' => 'strong-password-123'])->assertRedirect('/dashboard')->assertSessionMissing('pending_collection_uuid');
@@ -87,7 +87,7 @@ class CollectionMembershipTest extends TestCase
     public function test_member_sees_original_changes_but_cannot_modify_owner_content(): void
     {
         [$owner, $member, $c, $word] = $this->fixture();
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $word->update(['definition' => 'Updated original']);
         $this->actingAs($member)->get('/collections/'.$c->id)->assertOk()->assertDontSee('OWNER SECRET');
         $this->get('/collections/'.$c->id.'/study')->assertOk()->assertInertia(fn (Assert $page) => $page->where('words.0.definition', 'Updated original'))->assertDontSee('OWNER SECRET');
@@ -105,7 +105,7 @@ class CollectionMembershipTest extends TestCase
     {
         [$owner, $member, $c] = $this->fixture();
         $old = $c->share_uuid;
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $this->actingAs($owner)->delete('/collections/'.$c->id.'/sharing')->assertRedirect();
         $this->assertSame(0, $c->members()->count());
         $this->actingAs($member)->get('/collections/'.$c->id)->assertNotFound();
@@ -114,8 +114,8 @@ class CollectionMembershipTest extends TestCase
         $this->actingAs($owner)->post('/collections/'.$c->id.'/sharing')->assertRedirect();
         $this->assertNotSame($old, $c->fresh()->share_uuid);
         $this->actingAs($member)->get('/collections/'.$c->id)->assertNotFound();
-        $this->post('/s/'.$old.'/join', ['progress_consent' => true])->assertNotFound();
-        $this->post('/s/'.$c->fresh()->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/collections/'.$c->id);
+        $this->post('/s/'.$old.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertNotFound();
+        $this->post('/s/'.$c->fresh()->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/collections/'.$c->id);
         $this->get('/collections/'.$c->id)->assertOk();
     }
 
@@ -123,7 +123,7 @@ class CollectionMembershipTest extends TestCase
     {
         [$owner, $member, $c, $word] = $this->fixture();
         $other = User::factory()->create();
-        $c->members()->attach([$member->id, $other->id], ['progress_consented_at' => now()]);
+        $c->members()->attach([$member->id, $other->id], ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $this->actingAs($member)->put('/collections/'.$c->id.'/words/'.$word->id.'/note', ['note' => 'MEMBER SECRET'])->assertRedirect();
         $this->get('/collections/'.$c->id.'/study')->assertInertia(fn (Assert $p) => $p->where('words.0.note', 'MEMBER SECRET'))->assertDontSee('OWNER SECRET');
         $this->assertSame('OWNER SECRET', $word->fresh()->note);
@@ -142,7 +142,7 @@ class CollectionMembershipTest extends TestCase
     public function test_newest_fifteen_cursor_pages_cover_all_words_and_study_is_not_paginated(): void
     {
         [$owner, $member, $c, $word] = $this->fixture();
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $ids = [$word->id];
         for ($i = 1; $i <= 31; $i++) {
             $w = $owner->words()->create(['term' => 'Word '.$i, 'definition' => 'Definition '.$i]);
@@ -169,7 +169,7 @@ class CollectionMembershipTest extends TestCase
     public function test_csv_exports_are_scoped_and_formula_safe_in_all_columns(): void
     {
         [$owner, $member, $c, $word] = $this->fixture();
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $word->update(['term' => '=HYPERLINK("https://evil.example")', 'definition' => " \t+SUM(1,2)", 'note' => '@OWNER']);
         $this->actingAs($member)->put('/collections/'.$c->id.'/words/'.$word->id.'/note', ['note' => '-MEMBER'])->assertRedirect();
         $memberCsv = $this->get('/collections/'.$c->id.'/export')->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff')->streamedContent();
@@ -199,7 +199,7 @@ class CollectionMembershipTest extends TestCase
         $driver->shouldReceive('enablePKCE')->once()->andReturnSelf();
         $driver->shouldReceive('user')->once()->andReturn($google);
         Socialite::shouldReceive('driver')->once()->with('google')->andReturn($driver);
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/login');
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/login');
         $this->get('/auth/google/callback')->assertRedirect('/auth/google/link');
         $this->assertSame(0, $c->members()->count());
         $this->post('/auth/google/link', ['password' => 'wrong-password'])->assertSessionHasErrors('password');
@@ -218,7 +218,7 @@ class CollectionMembershipTest extends TestCase
     public function test_revocation_prevents_completion_of_inflight_member_session(): void
     {
         [$owner, $member, $c, $word] = $this->fixture();
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $session = $this->actingAs($member)->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'test', 'settings' => ['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 1]])->assertCreated()->json();
         $this->actingAs($owner)->delete('/collections/'.$c->id.'/sharing')->assertRedirect();
         $this->actingAs($member)->postJson('/collections/'.$c->id.'/sessions/'.$session['id'].'/complete', ['answers' => [['word_id' => $word->id, 'answer' => 'Bright']]])->assertNotFound();
@@ -228,7 +228,7 @@ class CollectionMembershipTest extends TestCase
     public function test_dashboard_lists_active_membership_and_owner_flag_without_copying_pool(): void
     {
         [$owner, $member, $c] = $this->fixture();
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $this->actingAs($member)->get('/dashboard')->assertInertia(fn (Assert $p) => $p->where('stats.collections', 1)->where('stats.joined', 1)->where('stats.words', 0)->where('collections.0.isOwner', false)->where('collections.0.id', $c->id));
         $this->actingAs($owner)->get('/dashboard')->assertInertia(fn (Assert $p) => $p->where('collections.0.isOwner', true));
         $this->delete('/collections/'.$c->id.'/sharing');

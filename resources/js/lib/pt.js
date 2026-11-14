@@ -506,5 +506,8 @@ export default {
   "You can return to Progress sharing choices to withdraw consent and leave. The owner will no longer see your progress.": "Pode voltar às Escolhas de partilha de progresso para retirar o consentimento e sair. O proprietário deixará de ver o seu progresso.",
 "Administrator collection access is logged.":"O acesso administrativo às coleções é registado.",
 "These restrictions apply within the app. People with direct server or database access may still access stored data.":"Estas restrições aplicam-se dentro da aplicação. Pessoas com acesso direto ao servidor ou à base de dados podem continuar a aceder aos dados armazenados.",
-"Withdrawing stops future administrator visibility in the app. It cannot retract information already viewed or erase access logs.":"A retirada impede a visibilidade administrativa futura na aplicação. Não pode retirar informações já consultadas nem apagar registos de acesso."
+"Withdrawing stops future administrator visibility in the app. It cannot retract information already viewed or erase access logs.":"A retirada impede a visibilidade administrativa futura na aplicação. Não pode retirar informações já consultadas nem apagar registos de acesso.",
+"The owner can also search members by all or part of an email address. Your email is not displayed, but matching results can reveal or confirm your email address.":"O proprietário também pode pesquisar membros usando a totalidade ou parte de um endereço de email. O seu email não é apresentado, mas os resultados correspondentes podem revelar ou confirmar o seu endereço de email.",
+"I agree to share my existing and future progress and allow email-based matching by this collection\u2019s owner.":"Concordo em partilhar o meu progresso anterior e futuro e permitir a pesquisa por email pelo proprietário desta coleção.",
+"Search accounts by name or email":"Pesquisar contas por nome ou email"
 };

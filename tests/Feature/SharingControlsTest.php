@@ -28,7 +28,7 @@ class SharingControlsTest extends TestCase
         $c->forceFill(['share_uuid' => (string) Str::uuid()])->save();
         $w = $owner->words()->create(['term' => 'word', 'definition' => 'meaning', 'note' => 'PRIVATE']);
         $c->words()->attach($w);
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
 
         return [$owner, $member, $c->fresh(), $w];
     }
@@ -44,7 +44,7 @@ class SharingControlsTest extends TestCase
             $this->get('/s/'.$c->share_uuid.$suffix)->assertRedirect('/login');
             $this->getJson('/s/'.$c->share_uuid.$suffix)->assertUnauthorized();
         }
-        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/login')->assertSessionHas('pending_collection_uuid', $c->share_uuid);
+        $this->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/login')->assertSessionHas('pending_collection_uuid', $c->share_uuid);
         $this->actingAs($member)->get('/s/'.$c->share_uuid.'/study')->assertOk()->assertDontSee('PRIVATE');
     }
 
@@ -60,7 +60,7 @@ class SharingControlsTest extends TestCase
         $this->actingAs($member)->get('/collections/'.$c->id)->assertOk();
         $this->actingAs($owner)->delete('/collections/'.$c->id.'/members/'.$member->id)->assertRedirect();
         $this->actingAs($member)->get('/collections/'.$c->id)->assertNotFound();
-        $this->post('/s/'.$new.'/join', ['progress_consent' => true])->assertRedirect('/collections/'.$c->id);
+        $this->post('/s/'.$new.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/collections/'.$c->id);
     }
 
     public function test_block_survives_rotation_and_unshare_and_denies_every_account_access_path(): void
@@ -73,7 +73,7 @@ class SharingControlsTest extends TestCase
         $this->post('/collections/'.$c->id.'/sharing')->assertRedirect();
         $uuid = $c->fresh()->share_uuid;
         // Even a stale membership must not override an explicit block.
-        $c->members()->attach($member, ['progress_consented_at' => now()]);
+        $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $this->actingAs($member);
         foreach (['', '/study?mode=flashcards', '/study?mode=study', '/study?mode=test', '/words'] as $suffix) {
             $this->get('/s/'.$uuid.$suffix)->assertNotFound();
@@ -81,7 +81,7 @@ class SharingControlsTest extends TestCase
         foreach (['', '/study', '/words', '/export', '/words/'.$w->id.'/note'] as $suffix) {
             $this->getJson('/collections/'.$c->id.$suffix)->assertNotFound();
         }
-        $this->post('/s/'.$uuid.'/join', ['progress_consent' => true])->assertNotFound();
+        $this->post('/s/'.$uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertNotFound();
         $this->putJson('/collections/'.$c->id.'/words/'.$w->id.'/note', ['note' => 'blocked'])->assertNotFound();
         $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study'])->assertNotFound();
         $this->postJson('/collections/'.$c->id.'/sessions/'.$session['id'].'/complete', ['answers' => [['word_id' => $w->id, 'known' => true]]])->assertNotFound();
@@ -116,7 +116,7 @@ class SharingControlsTest extends TestCase
         $this->assertFalse($c->members()->where('users.id', $member->id)->exists());
         $this->actingAs($owner)->delete('/collections/'.$c->id.'/blocks/'.$member->id)->assertRedirect();
         $this->assertSame(0, $c->members()->count());
-        $this->actingAs($member)->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true])->assertRedirect('/collections/'.$c->id);
+        $this->actingAs($member)->post('/s/'.$c->share_uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/collections/'.$c->id);
     }
 
     public function test_signed_in_link_preserves_intended_destination_after_registration(): void
@@ -134,7 +134,7 @@ class SharingControlsTest extends TestCase
         [$owner, $member, $c] = $this->fixture();
         $old = $c->share_uuid;
         $this->actingAs($owner)->post('/collections/'.$c->id.'/sharing/rotate')->assertRedirect();
-        $this->post('/s/'.$old.'/join', ['progress_consent' => true])->assertNotFound();
+        $this->post('/s/'.$old.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertNotFound();
         $this->delete('/collections/'.$c->id.'/sharing')->assertRedirect();
         $this->postJson('/collections/'.$c->id.'/sharing/rotate')->assertUnprocessable();
         $this->assertNull($c->fresh()->share_uuid);

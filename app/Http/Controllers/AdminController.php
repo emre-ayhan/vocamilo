@@ -6,6 +6,7 @@ use App\Http\Middleware\RequireAccountDisclosure;
 use App\Models\Collection;
 use App\Models\User;
 use App\Support\AdminAudit;
+use App\Support\LiteralSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -30,7 +31,7 @@ class AdminController extends Controller
     public function users(Request $r)
     {
         $q = $this->search($r);
-        $users = $this->consentedUsers()->when($q !== '', fn ($s) => $s->where(fn ($s) => $s->where('name', 'like', '%'.$q.'%')->orWhere('email', 'like', '%'.$q.'%')))->orderBy('id')->paginate(15, ['id', 'name', 'email', 'is_admin', 'suspended_at', 'created_at'])->withQueryString();
+        $users = $this->consentedUsers()->when($q !== '', fn ($s) => $s->where(fn ($s) => $s->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($q)])->orWhereRaw("LOWER(email) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($q)])))->orderBy('id')->paginate(15, ['id', 'name', 'email', 'is_admin', 'suspended_at', 'created_at'])->withQueryString();
         AdminAudit::record($r->user()->id, 'users_list');
 
         return Inertia::render('Admin/Users', ['users' => $users, 'filters' => ['q' => $q]]);
@@ -55,7 +56,7 @@ class AdminController extends Controller
     public function collections(Request $r)
     {
         $q = $this->search($r);
-        $collections = $this->consentedCollections()->when($q !== '', fn ($s) => $s->where('title', 'like', '%'.$q.'%'))->select('id', 'title', 'description', 'user_id', 'share_uuid')->withCount('words')->orderBy('id')->paginate(15)->withQueryString();
+        $collections = $this->consentedCollections()->when($q !== '', fn ($s) => $s->whereRaw("LOWER(title) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($q)]))->select('id', 'title', 'description', 'user_id', 'share_uuid')->withCount('words')->orderBy('id')->paginate(15)->withQueryString();
         AdminAudit::record($r->user()->id, 'collections_list');
         foreach ($collections as $c) {
             AdminAudit::record($r->user()->id, 'collection_list_item', $c->id);

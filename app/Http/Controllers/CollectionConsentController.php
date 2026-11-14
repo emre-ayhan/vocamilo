@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Collection;
 use App\Models\StudySession;
+use App\Support\LiteralSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,14 +23,14 @@ class CollectionConsentController extends Controller
             return redirect('/login');
         }
 
-        return Inertia::render('Collections/Consent', ['collection' => ['id' => null, 'title' => $c->title], 'joinUuid' => $uuid, 'existingMember' => false]);
+        return Inertia::render('Collections/Consent', ['collection' => ['id' => null, 'title' => $c->title], 'joinUuid' => $uuid, 'existingMember' => false, 'consentVersion' => Collection::PROGRESS_CONSENT_VERSION]);
     }
 
     public function cancelJoin(Request $r, string $uuid)
     {
         abort_unless(Str::isUuid($uuid), 404);
         if ($r->session()->get('pending_collection_uuid') === $uuid) {
-            $r->session()->forget(['pending_collection_uuid', 'pending_collection_progress_consent', 'pending_collection_consent_expires_at']);
+            $r->session()->forget(['pending_collection_uuid', 'pending_collection_progress_consent', 'pending_collection_consent_expires_at', 'pending_collection_consent_version']);
         }
 
         return redirect('/s/'.$uuid);
@@ -44,16 +45,16 @@ class CollectionConsentController extends Controller
     {
         $c = $this->membership($r, $collection);
 
-        return Inertia::render('Collections/Consent', ['collection' => $c->only('id', 'title'), 'joinUuid' => null, 'existingMember' => true]);
+        return Inertia::render('Collections/Consent', ['collection' => $c->only('id', 'title'), 'joinUuid' => null, 'existingMember' => true, 'consentVersion' => Collection::PROGRESS_CONSENT_VERSION]);
     }
 
     public function accept(Request $r, int $collection)
     {
-        $r->validate(['progress_consent' => 'required|accepted']);
+        $r->validate(['progress_consent' => 'required|accepted', 'consent_version' => 'required|integer|in:'.Collection::PROGRESS_CONSENT_VERSION]);
         DB::transaction(function () use ($r, $collection) {
             Collection::whereKey($collection)->lockForUpdate()->firstOrFail();
             $c = $this->membership($r, $collection);
-            $c->members()->updateExistingPivot($r->user()->id, ['progress_consented_at' => now()]);
+            $c->members()->updateExistingPivot($r->user()->id, ['progress_consented_at' => now(), 'progress_consent_version' => Collection::PROGRESS_CONSENT_VERSION]);
         });
 
         return redirect('/collections/'.$collection);
@@ -75,7 +76,7 @@ class CollectionConsentController extends Controller
         $c = $r->user()->collections()->findOrFail($collection);
         $filters = $r->validate(['q' => 'nullable|string|max:100', 'page' => 'nullable|integer|min:1']);
         $search = trim($filters['q'] ?? '');
-        $members = $c->members()->when(! $c->share_uuid, fn ($q) => $q->whereRaw('1 = 0'))->when($search !== '', fn ($q) => $q->where('users.name', 'like', '%'.$search.'%'))->wherePivotNotNull('progress_consented_at')
+        $members = $c->members()->when(! $c->share_uuid, fn ($q) => $q->whereRaw('1 = 0'))->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->whereRaw("LOWER(users.name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)])->orWhereRaw("LOWER(users.email) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)])))->wherePivotNotNull('progress_consented_at')->wherePivot('progress_consent_version', Collection::PROGRESS_CONSENT_VERSION)
             ->where('users.admin_disclosure_version', 1)->whereNotNull('users.admin_disclosure_accepted_at')->whereNull('users.suspended_at')
             ->whereNotIn('users.id', $c->blockedUsers()->pluck('users.id'))
             ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'])->withQueryString();

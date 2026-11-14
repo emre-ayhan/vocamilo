@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Collection;
 use App\Models\StudySession;
 use App\Support\AdminAudit;
+use App\Support\LiteralSearch;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,10 +53,11 @@ class CollectionController extends Controller
     public function join(Request $r, string $uuid)
     {
         $c = $this->shared($uuid, true);
-        $r->validate(['progress_consent' => 'required|accepted']);
+        $r->validate(['progress_consent' => 'required|accepted', 'consent_version' => 'required|integer|in:'.Collection::PROGRESS_CONSENT_VERSION]);
         if (! $r->user()) {
             $r->session()->put('pending_collection_uuid', $uuid);
             $r->session()->put('pending_collection_progress_consent', true);
+            $r->session()->put('pending_collection_consent_version', Collection::PROGRESS_CONSENT_VERSION);
             $r->session()->put('pending_collection_consent_expires_at', now()->addMinutes(30)->timestamp);
 
             return redirect('/login');
@@ -63,6 +65,7 @@ class CollectionController extends Controller
         if ((int) $r->user()->admin_disclosure_version !== 1 || ! $r->user()->admin_disclosure_accepted_at) {
             $r->session()->put('pending_collection_uuid', $uuid);
             $r->session()->put('pending_collection_progress_consent', true);
+            $r->session()->put('pending_collection_consent_version', Collection::PROGRESS_CONSENT_VERSION);
             $r->session()->put('pending_collection_consent_expires_at', now()->addMinutes(30)->timestamp);
 
             return redirect('/account/disclosure');
@@ -71,7 +74,7 @@ class CollectionController extends Controller
             $locked = Collection::whereKey($c->id)->where('share_uuid', $uuid)->lockForUpdate()->firstOrFail();
             abort_if($locked->isBlocked($r->user()->id), 404);
             if ($locked->user_id !== $r->user()->id) {
-                $locked->members()->syncWithoutDetaching([$r->user()->id => ['progress_consented_at' => now()]]);
+                $locked->members()->syncWithoutDetaching([$r->user()->id => ['progress_consented_at' => now(), 'progress_consent_version' => Collection::PROGRESS_CONSENT_VERSION]]);
             }
         });
 
@@ -227,10 +230,10 @@ class CollectionController extends Controller
         $c = $this->owned($r, $collection);
         $filters = $r->validate(['q' => 'nullable|string|max:100', 'participants_page' => 'nullable|integer|min:1', 'blocked_page' => 'nullable|integer|min:1']);
         $search = trim($filters['q'] ?? '');
-        $participants = $c->members()->when($search !== '', fn ($q) => $q->where('users.name', 'like', '%'.$search.'%'))
+        $participants = $c->members()->when($search !== '', fn ($q) => $q->whereRaw("LOWER(users.name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)]))
             ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'], 'participants_page')->withQueryString()
             ->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'joined_at' => $u->pivot->created_at?->toIso8601String()]);
-        $blocked = $c->blockedUsers()->when($search !== '', fn ($q) => $q->where('users.name', 'like', '%'.$search.'%'))
+        $blocked = $c->blockedUsers()->when($search !== '', fn ($q) => $q->whereRaw("LOWER(users.name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)]))
             ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'], 'blocked_page')->withQueryString()
             ->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'blocked_at' => $u->pivot->created_at?->toIso8601String()]);
 
