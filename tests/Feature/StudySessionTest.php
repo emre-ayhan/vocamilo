@@ -51,6 +51,40 @@ class StudySessionTest extends TestCase
         $this->assertCount(4, $summary['recent']);
     }
 
+    public function test_cumulative_mode_totals_are_first_presentations_not_retries_and_scoped_to_learner(): void
+    {
+        [$owner, $collection] = $this->fixture();
+        $member = User::factory()->create();
+        $other = $owner->collections()->create(['title' => 'Separate collection']);
+        foreach (['flashcards', 'study', 'test'] as $mode) {
+            $base = ['user_id' => $owner->id, 'collection_id' => $collection->id, 'mode' => $mode, 'settings' => [], 'questions' => [], 'total_count' => 5, 'correct_count' => 3, 'completed_at' => now()];
+            // Historical v1 row without total_attempts, then a retry-heavy newer row.
+            StudySession::create(['id' => (string) Str::uuid(), 'rules_version' => 1] + $base);
+            StudySession::create(['id' => (string) Str::uuid(), 'rules_version' => 3, 'total_attempts' => 15] + $base);
+            StudySession::create(['id' => (string) Str::uuid(), 'completed_at' => null, 'total_attempts' => 50] + $base);
+            StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $member->id, 'total_count' => 2, 'correct_count' => 1] + $base);
+            StudySession::create(['id' => (string) Str::uuid(), 'collection_id' => $other->id] + $base);
+        }
+        $ownerSummary = StudySession::summaryFor($collection);
+        $memberSummary = StudySession::summaryFor($collection, $member->id);
+        foreach (['flashcards', 'study', 'test'] as $mode) {
+            $this->assertSame(10, $ownerSummary['modes'][$mode]['total_practiced']);
+            $this->assertSame(6, $ownerSummary['modes'][$mode]['total_correct']);
+            $this->assertSame(2, $ownerSummary['modes'][$mode]['count']);
+            $this->assertSame(2, $memberSummary['modes'][$mode]['total_practiced']);
+            $this->assertSame(1, $memberSummary['modes'][$mode]['total_correct']);
+        }
+    }
+
+    public function test_empty_history_returns_integer_zero_totals_for_every_mode(): void
+    {
+        [, $collection] = $this->fixture();
+        foreach (StudySession::summaryFor($collection)['modes'] as $summary) {
+            $this->assertSame(0, $summary['total_practiced']);
+            $this->assertSame(0, $summary['total_correct']);
+        }
+    }
+
     private function settings(array $overrides = []): array
     {
         return array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 2], $overrides);

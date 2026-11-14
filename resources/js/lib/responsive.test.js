@@ -52,10 +52,13 @@ test('private mode starts live inside summary cards while guests retain all thre
     assert.match(summary, /history-start\{width:100%;margin-top:auto/);
     assert.match(summary, /study\?mode=\$\{mode\}/);
 });
-test('progress summary replaces recent rows with aggregate counts and preserves starts',()=>{
+test('progress summary shows cumulative word totals in mode cards without a separate count card',()=>{
  const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
  assert.doesNotMatch(summary,/Recent sessions|v-for="session in summary.recent"/);
- assert.match(summary,/completion-summary/);
+ assert.doesNotMatch(summary,/completion-summary/);
+ assert.match(summary,/total_practiced/);
+ assert.match(summary,/total_correct/);
+ assert.match(summary,/last\?\.completed_at/);
  assert.match(summary,/<section class="study-history">/);
  assert.doesNotMatch(summary,/class="panel study-history"/);
  assert.match(summary,/summary.total_sessions/);

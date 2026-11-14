@@ -34,7 +34,7 @@ class StudySession extends Model
         foreach (['flashcards', 'study', 'test'] as $mode) {
             $q = (clone $query)->where('mode', $mode);
             $last = (clone $q)->orderByDesc('completed_at')->orderByDesc('id')->first();
-            $modes[$mode] = ['count' => $q->count(), 'last' => $last?->result(), 'best_percent' => $mode === 'test' ? (clone $q)->selectRaw('MAX(100.0 * correct_count / total_count) as best')->value('best') : null];
+            $modes[$mode] = ['count' => $q->count(), 'total_practiced' => (int) (clone $q)->sum('total_count'), 'total_correct' => (int) (clone $q)->sum('correct_count'), 'last' => $last?->result(), 'best_percent' => $mode === 'test' ? (clone $q)->selectRaw('MAX(100.0 * correct_count / total_count) as best')->value('best') : null];
         }
 
         return ['total_sessions' => $query->count(), 'modes' => $modes, 'recent' => (clone $query)->orderByDesc('completed_at')->orderByDesc('id')->limit(10)->get()->map(fn ($s) => $s->result())->all()];

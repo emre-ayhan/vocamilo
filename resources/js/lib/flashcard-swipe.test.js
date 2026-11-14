@@ -12,10 +12,10 @@ test('horizontal swipes mark revealed cards; scroll, short and mismatched gestur
 });
 test('gesture supports cancellation and scroll while retaining flip and action buttons',()=>{
  const s=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
- assert.match(s,/@pointercancel="swipeStart=null"/);
+ assert.match(s,/@pointercancel="cancelSwipe"/);
  assert.match(s,/pointerType!=='touch'/);
  assert.match(s,/touch-action:pan-y/);
- assert.match(s,/suppressFlipUntil=Date.now\(\)\+500/);
+ assert.match(s,/suppressFlipUntil=Date.now\(\)\+700/);
  assert.match(s,/@click="next\(false\)"/);
  assert.match(s,/@click="next\(true\)"/);
 });
@@ -25,4 +25,14 @@ test('Test shows neither live correctness icons nor feedback and uses repeat pay
  assert.match(s,/v-if="mode==='study'&&checked&&answer===option&&correct"/);
  assert.match(s,/answers:props.mode!=='flashcards'\?studyAttemptPayload/);
  assert.doesNotMatch(s,/if\(props.mode==='test'\)next\(\)/);
+});
+
+test('swipe motion follows touch intent with reduced-motion escape and timed exit',()=>{
+ const s=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+ assert.match(s,/@pointermove="moveSwipe"/);
+ assert.match(s,/dragX.value=dx/);
+ assert.match(s,/prefers-reduced-motion:reduce\)\{\.flashcard\{transform:none;transition:none/);
+ assert.match(s,/clearTimeout\(swipeTimer\)/);
+ assert.match(s,/Math.abs\(dy\)>20/);
+ assert.match(s,/class="swipe-badge"/);
 });

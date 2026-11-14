@@ -383,5 +383,9 @@
   "Read question aloud": "Ler a pergunta em voz alta",
   "Question": "Pergunta",
   "Reveal the answer, then swipe left for Still learning or right for I know this.": "Revele a resposta e deslize para a esquerda para Ainda estou a aprender ou para a direita para Já sei.",
-  "Test feedback appears at the end. A repeated question can indicate an earlier mistake; this is a practice test, not a secure exam.": "O resultado do teste aparece no final. Uma pergunta repetida pode indicar um erro anterior; este é um teste de prática, não um exame seguro."
+  "Test feedback appears at the end. A repeated question can indicate an earlier mistake; this is a practice test, not a secure exam.": "O resultado do teste aparece no final. Uma pergunta repetida pode indicar um erro anterior; este é um teste de prática, não um exame seguro.",
+  "Total word attempts": "Total de palavras praticadas",
+  "Marked known": "Marcadas como conhecidas",
+  "Correct first answers": "Primeiras respostas corretas",
+  "Totals cover completed sessions, not unique words. The same word counts again in a new session; automatic retries do not add to these totals. Study correct answers may include self-assessed equivalents. Your progress stays private.": "Os totais abrangem sessões concluídas, não palavras únicas. A mesma palavra volta a contar numa nova sessão; as repetições automáticas não aumentam estes totais. As respostas corretas de Study podem incluir equivalências autoavaliadas. O seu progresso permanece privado."
 }
