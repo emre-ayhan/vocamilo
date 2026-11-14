@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collection;
+use App\Models\User;
 use App\Support\AdminAudit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class VocabularyController extends Controller
@@ -26,28 +28,46 @@ class VocabularyController extends Controller
 
     public function index(Request $r)
     {
-        $search = mb_substr((string) $r->query('search', ''), 0, 200);
+        $d = $r->validate(['search' => 'nullable|string|max:200', 'pool_id' => 'nullable|integer|min:1']);
+        $search = trim($d['search'] ?? '');
+        $pools = $r->user()->wordPools()->withCount('words')->orderBy('name')->get();
+        $pool = isset($d['pool_id']) ? $r->user()->wordPools()->findOrFail($d['pool_id']) : $pools->first();
+        $words = $r->user()->words()->when($pool, fn ($q) => $q->whereHas('pools', fn ($q) => $q->where('word_pools.id', $pool->id)), fn ($q) => $q->whereRaw('1 = 0'));
 
-        return Inertia::render('Words/Index', ['words' => $r->user()->words()->when($search, fn ($q) => $q->where(fn ($q) => $q->where('term', 'like', '%'.$search.'%')->orWhere('definition', 'like', '%'.$search.'%')))->latest()->paginate(30)->withQueryString(), 'filters' => ['search' => $search]]);
+        return Inertia::render('Words/Index', ['words' => $words->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->where('term', 'like', '%'.$search.'%')->orWhere('definition', 'like', '%'.$search.'%')))->latest()->paginate(30)->withQueryString(), 'pools' => $pools, 'selectedPool' => $pool, 'filters' => ['search' => $search, 'pool_id' => $pool?->id]]);
     }
 
     public function store(Request $r)
     {
-        $r->user()->words()->create($this->data($r));
+        $d = $this->data($r);
+        $pool = $r->validate(['pool_id' => 'required|integer|min:1'])['pool_id'];
+        DB::transaction(function () use ($r, $d, $pool) {
+            User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
+            $p = $r->user()->wordPools()->findOrFail($pool);
+            $w = $r->user()->words()->create($d);
+            $p->words()->attach($w);
+        });
 
         return back()->with('success', __('Word added to your pool.'));
     }
 
     public function update(Request $r, int $word)
     {
-        $r->user()->words()->findOrFail($word)->update($this->data($r));
+        $d = $this->data($r);
+        DB::transaction(function () use ($r, $word, $d) {
+            User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
+            $r->user()->words()->findOrFail($word)->update($d);
+        });
 
         return back()->with('success', __('Word updated.'));
     }
 
     public function destroy(Request $r, int $word)
     {
-        $r->user()->words()->findOrFail($word)->delete();
+        DB::transaction(function () use ($r, $word) {
+            User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
+            $r->user()->words()->findOrFail($word)->delete();
+        });
 
         return back()->with('success', __('Word removed from your pool and collections.'));
     }

@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'uuid' => 'O campo :attribute deve ser um identificador válido.',
+    'regex' => 'O formato do campo :attribute é inválido.',
     'required' => 'O campo :attribute é obrigatório.',
     'string' => 'O campo :attribute deve ser texto.',
     'email' => 'O campo :attribute deve ser um endereço de e-mail válido.',
@@ -19,5 +21,5 @@ return [
     'min' => ['string' => 'O campo :attribute deve ter pelo menos :min caracteres.', 'numeric' => 'O campo :attribute deve ser pelo menos :min.', 'array' => 'O campo :attribute deve ter pelo menos :min elementos.'],
     'size' => ['array' => 'O campo :attribute deve ter :size elementos.'],
     'password' => ['letters' => 'A palavra-passe deve incluir pelo menos uma letra.', 'mixed' => 'A palavra-passe deve incluir maiúsculas e minúsculas.', 'numbers' => 'A palavra-passe deve incluir um número.', 'symbols' => 'A palavra-passe deve incluir um símbolo.'],
-    'attributes' => ['term_column' => 'coluna da palavra', 'definition_column' => 'coluna da definição', 'has_header' => 'linha de cabeçalho', 'collection_id' => 'coleção', 'settings.count' => 'número de perguntas', 'settings.type' => 'tipo de resposta', 'settings.order' => 'ordem', 'settings.direction' => 'direção da pergunta', 'name' => 'nome', 'email' => 'e-mail', 'password' => 'palavra-passe', 'title' => 'título', 'description' => 'descrição', 'term' => 'palavra', 'definition' => 'definição', 'note' => 'nota', 'file' => 'ficheiro', 'locale' => 'idioma', 'word_ids' => 'palavras', 'answers' => 'respostas'],
+    'attributes' => ['preview_id' => 'pré-visualização', 'pool_id' => 'conjunto de palavras', 'pool_ids' => 'conjuntos de palavras', 'language' => 'idioma', 'voice_language' => 'idioma de voz', 'term_column' => 'coluna da palavra', 'definition_column' => 'coluna da definição', 'has_header' => 'linha de cabeçalho', 'collection_id' => 'coleção', 'settings.count' => 'número de perguntas', 'settings.type' => 'tipo de resposta', 'settings.order' => 'ordem', 'settings.direction' => 'direção da pergunta', 'name' => 'nome', 'email' => 'e-mail', 'password' => 'palavra-passe', 'title' => 'título', 'description' => 'descrição', 'term' => 'palavra', 'definition' => 'definição', 'note' => 'nota', 'file' => 'ficheiro', 'locale' => 'idioma', 'word_ids' => 'palavras', 'answers' => 'respostas'],
 ];

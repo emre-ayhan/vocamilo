@@ -35,6 +35,11 @@ class User extends Authenticatable
         'google_id',
     ];
 
+    public function wordPools()
+    {
+        return $this->hasMany(WordPool::class);
+    }
+
     public function words()
     {
         return $this->hasMany(Word::class);

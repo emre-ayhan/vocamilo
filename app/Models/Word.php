@@ -8,6 +8,11 @@ class Word extends Model
 {
     protected $fillable = ['term', 'definition', 'note'];
 
+    public function pools()
+    {
+        return $this->belongsToMany(WordPool::class, 'pool_word');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

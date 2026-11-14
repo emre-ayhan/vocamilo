@@ -9,7 +9,7 @@ class Collection extends Model
 {
     public const PROGRESS_CONSENT_VERSION = 2;
 
-    protected $fillable = ['title', 'description'];
+    protected $fillable = ['title', 'description', 'voice_language'];
 
     public function members()
     {

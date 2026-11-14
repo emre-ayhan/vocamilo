@@ -22,7 +22,15 @@ class VocabularyTest extends TestCase
 
     private function word(User $user, string $term = 'bright')
     {
-        return $user->words()->create(['term' => $term, 'definition' => 'full of light', 'note' => 'PRIVATE_TRANSLATION']);
+        $word = $user->words()->create(['term' => $term, 'definition' => 'full of light', 'note' => 'PRIVATE_TRANSLATION']);
+        $this->pool($user)->words()->attach($word);
+
+        return $word;
+    }
+
+    private function pool(User $user)
+    {
+        return $user->wordPools()->firstOrCreate(['name' => 'Test pool'], ['language' => 'en']);
     }
 
     private function collection(User $user)
@@ -78,7 +86,7 @@ class VocabularyTest extends TestCase
         $owner = User::factory()->create();
         $other = User::factory()->create();
         $foreign = $this->word($other, 'foreign');
-        $this->actingAs($owner)->post('/words', ['term' => 'sun', 'definition' => 'a star', 'note' => 'my note', 'user_id' => $other->id])->assertRedirect();
+        $this->actingAs($owner)->post('/words', ['pool_id' => $this->pool($owner)->id, 'term' => 'sun', 'definition' => 'a star', 'note' => 'my note', 'user_id' => $other->id])->assertRedirect();
         $mine = $owner->words()->firstOrFail();
         $this->assertDatabaseHas('words', ['id' => $mine->id, 'user_id' => $owner->id]);
         $this->put('/words/'.$mine->id, ['term' => 'moon', 'definition' => 'a satellite', 'note' => null])->assertRedirect();
@@ -209,12 +217,12 @@ class VocabularyTest extends TestCase
         $this->word($owner, 'bright');
         $c = $this->collection($owner);
         $csv = UploadedFile::fake()->createWithContent('words.csv', "term,definition\nbright,full of light\nsun,a star\nsun,a star\n");
-        $this->actingAs($owner)->post('/imports/preview', ['file' => $csv, 'has_header' => true])->assertInertia(fn (Assert $p) => $p->component('Import/Index')->where('preview.total', 2)->where('preview.duplicates', 2));
+        $this->actingAs($owner)->post('/imports/preview', ['pool_id' => $this->pool($owner)->id, 'file' => $csv, 'has_header' => true])->assertInertia(fn (Assert $p) => $p->component('Import/Index')->where('preview.total', 2)->where('preview.duplicates', 2));
         $this->assertDatabaseCount('words', 1);
-        $this->post('/imports/store', ['collection_id' => $c->id])->assertRedirect('/collections/'.$c->id);
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id'), 'collection_id' => $c->id])->assertRedirect('/collections/'.$c->id);
         $this->assertDatabaseCount('words', 2);
         $this->assertEqualsCanonicalizing(['bright', 'sun'], $c->words()->pluck('term')->all());
-        $this->post('/imports/store')->assertUnprocessable();
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertUnprocessable();
         $this->assertDatabaseCount('words', 2);
     }
 
@@ -222,8 +230,8 @@ class VocabularyTest extends TestCase
     {
         $owner = User::factory()->create();
         $csv = UploadedFile::fake()->createWithContent('words.csv', "a star,sun\n");
-        $this->actingAs($owner)->post('/imports/preview', ['file' => $csv, 'has_header' => false, 'term_column' => 1, 'definition_column' => 0])->assertInertia(fn (Assert $p) => $p->where('preview.rows.0.term', 'sun')->where('preview.rows.0.definition', 'a star'));
-        $this->post('/imports/store')->assertRedirect('/words');
+        $this->actingAs($owner)->post('/imports/preview', ['pool_id' => $this->pool($owner)->id, 'file' => $csv, 'has_header' => false, 'term_column' => 1, 'definition_column' => 0])->assertInertia(fn (Assert $p) => $p->where('preview.rows.0.term', 'sun')->where('preview.rows.0.definition', 'a star'));
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertRedirect('/words?pool_id='.$this->pool($owner)->id);
         $this->assertDatabaseHas('words', ['user_id' => $owner->id, 'term' => 'sun', 'definition' => 'a star']);
     }
 
@@ -231,7 +239,8 @@ class VocabularyTest extends TestCase
     {
         $owner = User::factory()->create();
         $foreign = $this->collection(User::factory()->create());
-        $this->actingAs($owner)->withSession(['csv_preview' => ['version' => 2, 'user_id' => $owner->id, 'rows' => [['term' => 'sun', 'definition' => 'a star']], 'expires_at' => time() + 60]])->post('/imports/store', ['collection_id' => $foreign->id])->assertNotFound();
+        $this->actingAs($owner)->post('/imports/preview', ['pool_id' => $this->pool($owner)->id, 'file' => UploadedFile::fake()->createWithContent('words.csv', "term,definition\nsun,a star\n"), 'has_header' => true])->assertOk();
+        $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id'), 'collection_id' => $foreign->id])->assertNotFound();
         $this->assertDatabaseCount('words', 0);
     }
 
@@ -240,16 +249,17 @@ class VocabularyTest extends TestCase
         $owner = User::factory()->create();
         $other = User::factory()->create();
         $rows = [['term' => 'sun', 'definition' => 'a star']];
-        $this->actingAs($owner)->withSession(['csv_preview' => ['version' => 2, 'user_id' => $owner->id, 'rows' => $rows, 'expires_at' => time() - 1]])->post('/imports/store')->assertUnprocessable();
-        $this->withSession(['csv_preview' => ['user_id' => $other->id, 'rows' => $rows, 'expires_at' => time() + 60]])->post('/imports/store')->assertUnprocessable();
+        $this->actingAs($owner)->withSession(['csv_preview' => ['version' => 3, 'user_id' => $owner->id, 'rows' => $rows, 'expires_at' => time() - 1]])->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertUnprocessable();
+        $this->withSession(['csv_preview' => ['version' => 3, 'user_id' => $other->id, 'rows' => $rows, 'expires_at' => time() + 60]])->post('/imports/store', ['preview_id' => session('csv_preview.preview_id')])->assertUnprocessable();
         $this->assertDatabaseCount('words', 0);
     }
 
     public function test_csv_rejects_missing_oversized_or_invalid_content(): void
     {
-        $this->actingAs(User::factory()->create())->post('/imports/preview')->assertSessionHasErrors('file');
-        $this->post('/imports/preview', ['file' => UploadedFile::fake()->create('large.csv', 2049)])->assertSessionHasErrors('file');
-        $this->post('/imports/preview', ['file' => UploadedFile::fake()->createWithContent('bad.csv', "term,definition\nword,\n")])->assertSessionHasErrors('file');
+        $owner = User::factory()->create();
+        $this->actingAs($owner)->post('/imports/preview')->assertSessionHasErrors('file');
+        $this->post('/imports/preview', ['pool_id' => $this->pool($owner)->id, 'file' => UploadedFile::fake()->create('large.csv', 2049)])->assertSessionHasErrors('file');
+        $this->post('/imports/preview', ['pool_id' => $this->pool($owner)->id, 'file' => UploadedFile::fake()->createWithContent('bad.csv', "term,definition\nword,\n")])->assertSessionHasErrors('file');
         $this->assertDatabaseCount('words', 0);
     }
 }

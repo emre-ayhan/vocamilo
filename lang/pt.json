@@ -450,5 +450,7 @@
   "Membership removed. Your private notes and study history have been preserved.": "Associação removida. As suas notas privadas e o histórico de estudo foram preservados.",
   "Please review the administrator access disclosure.": "Reveja a informação sobre o acesso dos administradores.",
   "Sharing disabled.": "Partilha desativada.",
-  "This account is suspended.": "Esta conta está suspensa."
+  "This account is suspended.": "Esta conta está suspensa.",
+  "The selected pool changed. Upload the CSV again.": "O conjunto selecionado mudou. Carregue novamente o CSV.",
+  "This preview was replaced. Upload the CSV again.": "Esta pré-visualização foi substituída. Carregue novamente o CSV."
 }

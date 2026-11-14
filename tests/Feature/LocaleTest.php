@@ -50,7 +50,8 @@ class LocaleTest extends TestCase
     {
         $user = User::factory()->create(['locale' => 'pt']);
         $file = UploadedFile::fake()->createWithContent('words.csv', "term,definition\n,missing term\n");
-        $response = $this->actingAs($user)->postJson('/imports/preview', ['file' => $file, 'has_header' => true]);
+        $pool = $user->wordPools()->create(['name' => 'English', 'language' => 'en']);
+        $response = $this->actingAs($user)->postJson('/imports/preview', ['pool_id' => $pool->id, 'file' => $file, 'has_header' => true]);
         $response->assertUnprocessable()->assertJsonPath('errors.file.0', 'Palavra ou definição inválida na linha 2 do CSV. Utilize UTF-8 e preencha as colunas de palavra e definição.');
         $this->postJson('/imports/store')->assertUnprocessable()->assertJsonPath('message', 'A pré-visualização expirou. Carregue novamente o CSV.');
     }

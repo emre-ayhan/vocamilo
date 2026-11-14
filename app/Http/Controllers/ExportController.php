@@ -10,7 +10,10 @@ class ExportController extends Controller
 {
     public function pool(Request $r)
     {
-        return $this->csv($r->user()->words()->orderBy('id')->get()->map(fn ($w) => [$w->term, $w->definition, $w->note ?? '']), 'vocabulary.csv');
+        $d = $r->validate(['pool_id' => 'required|integer']);
+        $pool = $r->user()->wordPools()->findOrFail($d['pool_id']);
+
+        return $this->csv($pool->words()->where('words.user_id', $r->user()->id)->reorder()->orderBy('words.id')->get()->map(fn ($w) => [$w->term, $w->definition, $w->note ?? '']), 'vocabulary-'.$pool->id.'.csv');
     }
 
     public function collection(Request $r, int $collection)

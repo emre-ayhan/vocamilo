@@ -177,8 +177,11 @@ class CollectionMembershipTest extends TestCase
         $this->assertSame(['term', 'definition', 'note'], $rows[0]);
         $this->assertSame(["'".$word->term, "'".$word->definition, "'-MEMBER"], $rows[1]);
         $this->assertStringNotContainsString('OWNER', $memberCsv);
-        $this->assertCount(1, $this->csvRows($this->get('/words/export')->assertOk()->streamedContent()));
-        $ownerCsv = $this->actingAs($owner)->get('/words/export')->assertOk()->streamedContent();
+        $memberPool = $member->wordPools()->create(['name' => 'Own empty pool', 'language' => 'en']);
+        $ownerPool = $owner->wordPools()->create(['name' => 'Own words', 'language' => 'en']);
+        $ownerPool->words()->attach($word);
+        $this->assertCount(1, $this->csvRows($this->get('/words/export?pool_id='.$memberPool->id)->assertOk()->streamedContent()));
+        $ownerCsv = $this->actingAs($owner)->get('/words/export?pool_id='.$ownerPool->id)->assertOk()->streamedContent();
         $this->assertSame("'@OWNER", $this->csvRows($ownerCsv)[1][2]);
         $stranger = User::factory()->create();
         $this->actingAs($stranger)->get('/collections/'.$c->id.'/export')->assertNotFound();
@@ -243,6 +246,8 @@ class CollectionMembershipTest extends TestCase
             $c->words()->attach($word);
         }
         $available = $owner->words()->create(['term' => 'Available', 'definition' => 'Not attached']);
+        $pool = $owner->wordPools()->create(['name' => 'Selection', 'language' => 'en']);
+        $pool->words()->attach($owner->words()->pluck('id'));
         $this->actingAs($owner)->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->has('collection.words', 15)->has('availableWords', 1)->where('availableWords.0.id', $available->id));
     }
 
@@ -253,7 +258,9 @@ class CollectionMembershipTest extends TestCase
         foreach ($values as $i => $value) {
             $owner->words()->create(['term' => $value, 'definition' => "Português, \"quoted\"\nnext line", 'note' => 'safe']);
         }
-        $rows = $this->csvRows($this->actingAs($owner)->get('/words/export')->assertOk()->streamedContent());
+        $pool = $owner->wordPools()->create(['name' => 'Own words', 'language' => 'en']);
+        $pool->words()->attach($owner->words()->pluck('id'));
+        $rows = $this->csvRows($this->actingAs($owner)->get('/words/export?pool_id='.$pool->id)->assertOk()->streamedContent());
         foreach ($values as $i => $value) {
             $this->assertSame("'".$value, $rows[$i + 1][0]);
             $this->assertSame("Português, \"quoted\"\nnext line", $rows[$i + 1][1]);

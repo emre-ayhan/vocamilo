@@ -9,6 +9,7 @@ use App\Http\Controllers\ImportController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\StudySessionController;
 use App\Http\Controllers\VocabularyController;
+use App\Http\Controllers\WordPoolController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect(auth()->check() ? '/dashboard' : '/login'));
@@ -35,6 +36,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/collections/{collection}/words', [CollectionController::class, 'words']);
     Route::get('/collections/{collection}/words/{word}/note', [CollectionController::class, 'getNote']);
     Route::put('/collections/{collection}/words/{word}/note', [CollectionController::class, 'note']);
+    Route::get('/word-pools/{pool}/available-words', [WordPoolController::class, 'available']);
+    Route::post('/word-pools', [WordPoolController::class, 'store']);
+    Route::put('/word-pools/{pool}', [WordPoolController::class, 'update']);
+    Route::delete('/word-pools/{pool}', [WordPoolController::class, 'destroy']);
+    Route::post('/word-pools/{pool}/words', [WordPoolController::class, 'attach']);
+    Route::delete('/word-pools/{pool}/words/{word}', [WordPoolController::class, 'detach']);
     Route::get('/words', [VocabularyController::class, 'index']);
     Route::post('/words', [VocabularyController::class, 'store']);
     Route::put('/words/{word}', [VocabularyController::class, 'update']);

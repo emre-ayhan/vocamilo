@@ -40,7 +40,7 @@ test('collection forms keep voice outside server form data and save only through
  const index=readFileSync(new URL('../Pages/Collections/Index.vue',import.meta.url),'utf8');
  const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
  const picker=readFileSync(new URL('../Components/LocalVoicePicker.vue',import.meta.url),'utf8');
- assert.match(index,/useForm\(\{ title: '', description: '' \}\)/);
+ assert.match(index,/useForm\(\{ title: '', description: '',voice_language:'' \}\)/);
  assert.match(index,/onSuccess: response =>/);
  assert.match(index,/response.props.collection.id/);
  assert.match(index,/draftVoice='';open = true/);

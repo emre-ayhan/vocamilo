@@ -184,3 +184,31 @@ Replace the placeholder with the intended account. The command rejects non-inter
 Member Progress searches names or email fragments only for active members who explicitly accepted version 2 of the collection sharing disclosure. Email addresses are not rendered, but a match can let the owner infer an address; this is disclosed before consent. Earlier progress-only consent is insufficient: existing members must reconsent before appearing in progress results, including counts and pagination. Old open forms and pending login intents cannot silently upgrade consent. Administrator account search supports partial names or email addresses, and administrator collection search matches titles. Searches trim outer whitespace and treat `%`, `_`, `!` and backslash as literal characters rather than user-controlled SQL wildcards. Search submission resets pagination; Clear removes the filter. Existing privacy/consent filters still apply, so an account that has not accepted the disclosure does not appear merely because its name or email matches.
 
 Matching uses `LOWER` on both the database field and bound search term. ASCII case-insensitive behavior is tested even with case-sensitive SQLite LIKE. Unicode case/accent matching remains dependent on the database's Unicode support/collation (stock SQLite LOWER is ASCII-only); the deployment's actual MySQL/MariaDB collation has not been inspected or changed.
+
+### Named word pools and one-time legacy assignment
+
+Create a named pool with its vocabulary language (for example `pt-PT` or `en-US`). A word can belong to multiple pools without being copied: its definition and owner's note remain one record. Removing it from a pool, or deleting a pool, does not delete the word, collection links, shared memberships, personal notes or study history. A different meaning can be added as a separate word even when the spelling is identical.
+
+CSV preview requires an owned target pool. Matching is confined to that pool; ambiguous duplicate terms are skipped rather than guessed. A unique matching record updates its definition everywhere that same word is reused. Two columns are sufficient. Preview binds the target pool and membership/definition snapshot; changes before confirmation require another preview. Exports are scoped to the selected pool and neutralize spreadsheet formulas.
+
+Migration `2026_11_14_000007_create_word_pools` only adds pool tables and the nullable collection voice-language field. It does not automatically assign existing words or alter sharing links, memberships, consent, notes or results. Existing collection contents continue to work. The pool list may initially be empty until a pool is created and old words are assigned.
+
+For the explicitly chosen existing account only, first create its desired pool in the application, then use its exact email and pool ID (visible in `/words?pool_id=...`). Back up the database before migration or applying the one-time assignment. Run the preview:
+
+```bash
+php artisan vocamilo:assign-legacy-words 'EXACT_ACCOUNT_EMAIL' POOL_ID
+```
+
+Check the displayed account, pool and word count. Only then apply:
+
+```bash
+php artisan vocamilo:assign-legacy-words 'EXACT_ACCOUNT_EMAIL' POOL_ID --apply
+```
+
+The command refuses a pool belonging to another account, attaches only that account's unpooled words, and is safe to repeat without duplication. It never copies or deletes words and does not modify any collection membership or share token. No production account is selected automatically.
+
+Collection voice language is a suggestion preference, not a translation. The personal device voice picker ranks available local voices by exact language/dialect and then language family. It never replaces a saved choice or enables speech automatically. If no matching voice is exposed, the picker says so; Android/browser voice variants are not guaranteed. Mixed-language collections can choose a different default language and personal voice.
+
+Joined users can leave a collection after confirmation. This removes membership and the owner's access to their shared progress, but retains private notes and historical results. An active public link may still allow guest viewing. Rejoining requires fresh current consent; retained history can then be visible again under that consent.
+
+Deploy with a database backup and a short maintenance window: `php artisan down`, `git pull --ff-only`, `php artisan migrate --force`, `npm run build`, `php artisan optimize:clear`, then `php artisan up`. Perform the explicit one-account assignment separately after creating the target pool. No background worker is required.
