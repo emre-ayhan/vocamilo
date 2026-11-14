@@ -115,9 +115,9 @@ This version intentionally registers **no service worker**, enables no offline m
 
 ## Optional Study read-aloud
 
-Study has a Read aloud switch above the questions, off by default. Choose an installed local voice matching your vocabulary's language, then enable it; the interface language does not determine pronunciation. Questions and selected answers are spoken using the browser's Speech Synthesis API; written answers are read on Check. Changing question, switching off or leaving the page cancels prior speech.
+Choose an installed local voice in collection creation/edit or the collection’s personal Voice settings. Study and Test have only a Read aloud switch; Flashcards places it beside Add/Edit note and reads the visible card face. All switches start off. Choose a voice matching your vocabulary’s language, then enable it; the interface language does not determine pronunciation. Questions and selected answers are spoken using the browser's Speech Synthesis API; written answers are read on Check. Changing question, switching off or leaving the page cancels prior speech.
 
-Only voices explicitly reported by the browser as `localService: true` are offered, with no network voice fallback and no server speech endpoint. If the API or local voices are unavailable the control explains why and stays disabled. Device voices can load asynchronously; availability and pronunciation depend on the browser/OS. Real-device audio and installed-app behavior still need acceptance testing. Read-aloud starts disabled whenever the Study page is opened.
+Only voices explicitly reported by the browser as `localService: true` are offered, with no network voice fallback and no server speech endpoint. If the API or local voices are unavailable the control explains why and stays disabled. Device voices can load asynchronously; availability and pronunciation depend on the browser/OS. Real-device audio and installed-app behavior still need acceptance testing. Read-aloud starts disabled whenever any practice module is opened. Flipping a flashcard cancels the previous speech and reads the newly visible face.
 
 ## Study repetition and next-session priority
 

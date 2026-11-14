@@ -410,5 +410,12 @@ export default {
   "Create word": "Criar palavra",
   "Conflicting definitions for this term in the CSV. All its rows were skipped.": "Existem definições diferentes para esta palavra no CSV. Todas as suas linhas foram ignoradas.",
   "More than one word in your pool matches this term. Its CSV rows were skipped.": "Mais de uma palavra no seu banco corresponde a este termo. As respetivas linhas do CSV foram ignoradas.",
-  "Your word pool changed after preview. Upload the CSV again before importing.": "O seu banco de palavras mudou após a pré-visualização. Carregue o CSV novamente antes de importar."
+  "Your word pool changed after preview. Upload the CSV again before importing.": "O seu banco de palavras mudou após a pré-visualização. Carregue o CSV novamente antes de importar.",
+  "Voice preferences are personal to this collection and browser. Browser storage must be available to remember them. Reading aloud stays off until you turn it on.": "As preferências de voz são pessoais para esta coleção e este navegador. O armazenamento do navegador tem de estar disponível para as guardar. A leitura em voz alta fica desligada até a ativar.",
+  "No voice selected": "Nenhuma voz selecionada",
+  "Saved voice unavailable on this device": "A voz guardada não está disponível neste dispositivo",
+  "Voice settings": "Definições de voz",
+  "Save voice": "Guardar voz",
+  "Choose an available local voice in collection settings to read aloud.": "Escolha uma voz local disponível nas definições da coleção para ler em voz alta.",
+  "Your browser could not save the voice preference. Allow browser storage and try again.": "O navegador não conseguiu guardar a preferência de voz. Permita o armazenamento no navegador e tente novamente."
 };

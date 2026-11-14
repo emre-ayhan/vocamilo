@@ -1,4 +1,6 @@
 <script setup>
+import LocalVoicePicker from '../../Components/LocalVoicePicker.vue';
+import {collectionVoicePreference} from '../../lib/speech-preference.js';
 import ModeIcon from "../../Components/ModeIcon.vue";
 import StartIcon from "../../Components/StartIcon.vue";
 import StudySummary from '../../Components/StudySummary.vue';
@@ -16,6 +18,12 @@ const props = defineProps({
     availableWords: { type: Array, default: () => [] }, next_cursor: { type: String, default: null },
     summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) },
 });
+let storage;try{storage=window.localStorage;}catch{}
+const voiceMemory=collectionVoicePreference(storage,props.collection,page.props.auth?.user?.id??'guest',props.shared);
+const voiceDraft=ref(voiceMemory.read()),showVoice=ref(false);
+function openVoice(){voiceDraft.value=voiceMemory.read();showVoice.value=true;}
+function persistVoice(uri){const saved=voiceMemory.write(uri);if(!saved)window.alert(t('Your browser could not save the voice preference. Allow browser storage and try again.'));return saved;}
+function saveVoice(){if(persistVoice(voiceDraft.value))showVoice.value=false;}
 const authenticated = computed(() => Boolean(page.props.auth?.user));
 const owner = computed(() => !props.shared && props.isOwner);
 const showAdd = ref(false), showEdit = ref(false), showNote = ref(false), query = ref(''), copyStatus = ref('');
@@ -68,15 +76,15 @@ function destroy() { if (confirm(t('Delete this collection? Your words will stay
 function editNote(word) { noteWord.value = word; note.note = word.note ?? ''; note.clearErrors(); showNote.value = true; }
 function saveNote() { note.put(`/collections/${props.collection.id}/words/${noteWord.value.id}/note`, { preserveScroll: true, onSuccess: () => { showNote.value = false; } }); }
 function join() { router.post(`/s/${props.collection.share_uuid}/join`); }
-useDialogEscape(() => { showAdd.value = false; showEdit.value = false; showNote.value = false; });
+useDialogEscape(() => { showAdd.value = false; showEdit.value = false; showNote.value = false;showVoice.value=false; });
 const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Flip. Recall. Repeat.' }, { mode: 'study', icon: '✦', name: 'Study', text: 'Practice at your own pace.' }, { mode: 'test', icon: '✓', name: 'Test', text: 'Find out what sticks.' }];
 </script>
 <template>
     <Head :title="collection.title" />
     <AppLayout :title="collection.title" :subtitle="collection.description" :shared="shared">
         <template #actions><div class="actions">
-            <a v-if="!shared" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
-            <button v-if="owner" class="button secondary" @click="showEdit = true">{{ t('Edit collection') }}</button>
+            <button class="button secondary" @click="openVoice">{{t('Voice settings')}}</button><a v-if="!shared" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
+            <button v-if="owner" class="button secondary" @click="voiceDraft=voiceMemory.read();showEdit = true">{{ t('Edit collection') }}</button>
             <span v-else class="pill dark">{{ t(shared ? 'SHARED COLLECTION' : 'SHARED WITH ME') }}</span>
         </div></template>
         <section v-if="shared" class="panel join-collection">
@@ -98,8 +106,9 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
         <div v-if="nextCursor || loadError" class="load-more"><p v-if="loadError" class="notice error" role="alert">{{ t('Could not load more words. Please try again.') }}</p><button class="button secondary" :disabled="loading" @click="loadMore">{{ t(loading ? 'Loading…' : 'Load more') }}</button><small class="muted">{{ t('Showing {shown} of {total}', { shown: visibleWords.length, total: totalWords }) }}</small></div>
         <div v-if="owner" class="form-actions"><button class="text-button danger" @click="destroy">{{ t('Delete collection') }}</button></div>
         <div v-if="showAdd && owner" class="modal-backdrop" @click.self="showAdd = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="add-title"><div class="section-heading"><h2 id="add-title">{{ t('Add from your pool') }}</h2><button class="icon-button" :aria-label="t('Close')" @click="showAdd = false">×</button></div><form @submit.prevent="add.post(`${base}/words`, { onSuccess: () => { showAdd = false; add.reset(); } })"><Errors :errors="add.errors" /><input type="search" v-model="query" :placeholder="t('Find a word…')" :aria-label="t('Find a word')" /><WordPicker :words="candidates" :filter="query" :disabled="add.processing" v-model="add.word_ids" /><div class="form-actions"><button type="button" class="button secondary" @click="showAdd = false">{{ t('Cancel') }}</button><button class="button" :disabled="!add.word_ids.length || add.processing">{{ t('Add {count} words', { count: add.word_ids.length }) }}</button></div></form></section></div>
-        <div v-if="showEdit && owner" class="modal-backdrop" @click.self="showEdit = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><h2 id="edit-title">{{ t('Edit collection') }}</h2><form @submit.prevent="edit.put(base, { onSuccess: () => showEdit = false })"><Errors :errors="edit.errors" /><label>{{ t('Title') }}<input v-model="edit.title" required maxlength="150" /></label><label>{{ t('Description') }}<textarea v-model="edit.description" maxlength="2000" rows="3" /></label><div class="form-actions"><button type="button" class="button secondary" @click="showEdit = false">{{ t('Cancel') }}</button><button class="button" :disabled="edit.processing">{{ t('Save changes') }}</button></div></form></section></div>
+        <div v-if="showEdit && owner" class="modal-backdrop" @click.self="showEdit = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><h2 id="edit-title">{{ t('Edit collection') }}</h2><form @submit.prevent="edit.put(base, { onSuccess: () => {persistVoice(voiceDraft);showEdit = false;} })"><Errors :errors="edit.errors" /><LocalVoicePicker v-model="voiceDraft"/><label>{{ t('Title') }}<input v-model="edit.title" required maxlength="150" /></label><label>{{ t('Description') }}<textarea v-model="edit.description" maxlength="2000" rows="3" /></label><div class="form-actions"><button type="button" class="button secondary" @click="showEdit = false">{{ t('Cancel') }}</button><button class="button" :disabled="edit.processing">{{ t('Save changes') }}</button></div></form></section></div>
         <div v-if="showNote && !shared" class="modal-backdrop" @click.self="showNote = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="note-title"><div class="section-heading"><h2 id="note-title">{{ t('Your private note') }}</h2><button class="icon-button" :aria-label="t('Close')" @click="showNote = false">×</button></div><p>{{ noteWord?.term }}</p><form @submit.prevent="saveNote"><Errors :errors="note.errors" /><label>{{ t('Note') }}<textarea v-model="note.note" rows="4" maxlength="5000" /></label><p class="muted small">{{ t('Only you can see this note. It does not change the original definition.') }}</p><div class="form-actions"><button type="button" class="button secondary" @click="showNote = false">{{ t('Cancel') }}</button><button class="button" :disabled="note.processing">{{ t('Save note') }}</button></div></form></section></div>
+        <div v-if="showVoice" class="modal-backdrop" @click.self="showVoice=false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="voice-title"><div class="section-heading"><h2 id="voice-title">{{t('Voice settings')}}</h2><button type="button" class="icon-button" :aria-label="t('Close')" @click="showVoice=false">×</button></div><form @submit.prevent="saveVoice"><LocalVoicePicker v-model="voiceDraft"/><div class="form-actions"><button type="button" class="button secondary" @click="showVoice=false">{{t('Cancel')}}</button><button class="button">{{t('Save voice')}}</button></div></form></section></div>
     </AppLayout>
 </template>
 
