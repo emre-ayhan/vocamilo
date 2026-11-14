@@ -47,7 +47,7 @@ test('private mode starts live inside summary cards while guests retain all thre
     const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
     const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
     assert.match(show, /<StudySummary v-if="!shared" :summary="summary" :base="base"/);
-    assert.match(show, /<div v-if="shared" class="mode-grid">/);
+    assert.match(show, /<div v-if="shared" class="mode-grid guest-mode-grid">/);
     assert.match(summary, /class="button history-start"/);
     assert.match(summary, /history-start\{width:100%;margin-top:auto/);
     assert.match(summary, /study\?mode=\$\{mode\}/);
@@ -77,11 +77,21 @@ test('mobile install has breathing room and login language sits opposite logo',(
 });
 test('guest Start is larger and right aligned; Start icons replace long visual arrows',()=>{
  const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
- assert.match(show,/guest-start\{align-self:flex-end/);
+ assert.match(show,/guest-start\{align-self:center/);
  assert.match(show,/min-width:112px;min-height:44px/);
  for(const path of ['../Pages/Collections/Show.vue','../Components/StudySummary.vue','../Pages/Study/Session.vue']){
  const s=readFileSync(new URL(path,import.meta.url),'utf8');
  assert.match(s,/<StartIcon\/>/);
  assert.doesNotMatch(s,/}}<\/b>.*Start →/);
  }
+});
+
+test('guest and summary share icons; count and gradient circle align in one heading',()=>{
+ const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
+ const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
+ assert.match(show,/<ModeIcon :mode="item.mode"/);
+ assert.match(summary,/<ModeIcon :mode="mode"/);
+ assert.match(summary,/mode-title-group/);
+ assert.match(summary,/class="mode-completed"/);
+ for(const mode of ['flashcards','study','test'])assert.ok(summary.includes('.history-mode--'+mode+' .history-start,.history-mode--'+mode+' .mode-percentage{background:linear-gradient'));
 });

@@ -1,4 +1,5 @@
 <script setup>
+import ModeIcon from "../../Components/ModeIcon.vue";
 import StartIcon from "../../Components/StartIcon.vue";
 import StudySummary from '../../Components/StudySummary.vue';
 import WordPicker from '../../Components/WordPicker.vue';
@@ -83,7 +84,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
             <button class="button" @click="join">{{ t(authenticated ? 'Join collection' : 'Sign in to join') }}</button>
         </section>
         <StudySummary v-if="!shared" :summary="summary" :base="base" />
-        <div v-if="shared" class="mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><span>{{ item.icon }}</span><h3>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p><b class="guest-start">{{ t('Start') }}<StartIcon/></b></Link></div>
+        <div v-if="shared" class="mode-grid guest-mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><div class="guest-mode-copy"><h3><ModeIcon :mode="item.mode"/>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p></div><b class="guest-start">{{ t('Start') }}<StartIcon/></b></Link></div>
         <section v-if="owner" class="sharing panel">
             <div><span class="eyebrow">{{ t('KNOWLEDGE IS BETTER SHARED') }}</span><h3>{{ t(collection.share_uuid ? 'Your link is ready.' : 'Keep it private. Or pass it on.') }}</h3><p class="muted">{{ t(collection.share_uuid ? 'Anyone with this link can study without signing in. Your private notes stay private.' : 'Turn on link sharing whenever you want. Your personal notes are never shared.') }}</p></div>
             <div class="actions"><button v-if="!collection.share_uuid" class="button secondary" @click="router.post(`${base}/sharing`)">{{ t('Enable link sharing') }}</button><template v-else><button class="button" @click="copy">{{ t('Copy link') }}</button><button class="text-button danger" @click="disable">{{ t('Turn off') }}</button></template></div>
@@ -103,5 +104,6 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
 </template>
 
 <style scoped>
-.mode-card{display:flex;flex-direction:column}.mode-card .guest-start{align-self:flex-end;justify-content:center;gap:8px;min-width:112px;min-height:44px;padding:12px 20px;font-size:14px;margin-top:auto}
+.mode-card{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}.guest-mode-copy{min-width:0}.guest-mode-copy h3{display:flex;align-items:center;gap:8px;margin:0 0 10px}.guest-mode-copy p{margin:0}.guest-mode-copy :deep(.mode-icon){flex-shrink:0}.mode-card .guest-start{align-self:center;flex-shrink:0;justify-content:center;gap:8px;min-width:112px;min-height:44px;padding:12px 20px;font-size:14px;margin-top:0}
+.guest-mode-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}.mode-card .guest-start{min-width:100px}@media(max-width:360px){.mode-card{padding:18px;gap:10px}.mode-card .guest-start{min-width:84px;padding:10px 12px}}
 </style>
