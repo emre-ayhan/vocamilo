@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class StudySession extends Model
 {
@@ -34,7 +35,22 @@ class StudySession extends Model
         foreach (['flashcards', 'study', 'test'] as $mode) {
             $q = (clone $query)->where('mode', $mode);
             $last = (clone $q)->orderByDesc('completed_at')->orderByDesc('id')->first();
-            $modes[$mode] = ['count' => $q->count(), 'total_practiced' => (int) (clone $q)->sum('total_count'), 'total_correct' => (int) (clone $q)->sum('correct_count'), 'last' => $last?->result(), 'best_percent' => $mode === 'test' ? (clone $q)->selectRaw('MAX(100.0 * correct_count / total_count) as best')->value('best') : null];
+            // Only recorded first attempts for words still in this collection contribute.
+            // Older rows default to attempt_no=1; never infer missing answers from aggregate scores.
+            $latestAnswers = DB::table('study_answers as a')
+                ->join('study_sessions as s', 's.id', '=', 'a.study_session_id')
+                ->join('collection_word as cw', function ($join) use ($collection) {
+                    $join->on('cw.word_id', '=', 'a.word_id')->where('cw.collection_id', $collection->id);
+                })
+                ->where('s.collection_id', $collection->id)
+                ->where('s.user_id', $learnerId ?? $collection->user_id)
+                ->where('s.mode', $mode)->whereNotNull('s.completed_at')
+                ->where('a.attempt_no', 1)
+                ->orderByDesc('s.completed_at')->orderByDesc('a.id')
+                ->get(['a.word_id', 'a.correct'])->unique('word_id');
+            $latestPracticed = $latestAnswers->count();
+            $latestCorrect = $latestAnswers->filter(fn ($answer) => (bool) $answer->correct)->count();
+            $modes[$mode] = ['latest_practiced' => $latestPracticed, 'latest_correct' => $latestCorrect, 'latest_percent' => $latestPracticed ? (int) round($latestCorrect / $latestPracticed * 100) : 0, 'count' => $q->count(), 'total_practiced' => (int) (clone $q)->sum('total_count'), 'total_correct' => (int) (clone $q)->sum('correct_count'), 'last' => $last?->result(), 'best_percent' => $mode === 'test' ? (clone $q)->selectRaw('MAX(100.0 * correct_count / total_count) as best')->value('best') : null];
         }
 
         return ['total_sessions' => $query->count(), 'modes' => $modes, 'recent' => (clone $query)->orderByDesc('completed_at')->orderByDesc('id')->limit(10)->get()->map(fn ($s) => $s->result())->all()];

@@ -387,5 +387,9 @@ export default {
   "Total word attempts": "Total de palavras praticadas",
   "Marked known": "Marcadas como conhecidas",
   "Correct first answers": "Primeiras respostas corretas",
-  "Totals cover completed sessions, not unique words. The same word counts again in a new session; automatic retries do not add to these totals. Study correct answers may include self-assessed equivalents. Your progress stays private.": "Os totais abrangem sessões concluídas, não palavras únicas. A mesma palavra volta a contar numa nova sessão; as repetições automáticas não aumentam estes totais. As respostas corretas de Study podem incluir equivalências autoavaliadas. O seu progresso permanece privado."
+  "Totals cover completed sessions, not unique words. The same word counts again in a new session; automatic retries do not add to these totals. Study correct answers may include self-assessed equivalents. Your progress stays private.": "Os totais abrangem sessões concluídas, não palavras únicas. A mesma palavra volta a contar numa nova sessão; as repetições automáticas não aumentam estes totais. As respostas corretas de Study podem incluir equivalências autoavaliadas. O seu progresso permanece privado.",
+  "Words practiced": "Palavras praticadas",
+  "Latest correct answers": "Últimas respostas corretas",
+  "Latest word success: {percent}%": "Sucesso mais recente por palavra: {percent}%",
+  "Each current collection word counts once, using your latest completed first attempt in that mode. Unpracticed words and automatic retries are excluded. Flashcards use your latest known mark; Study can include accepted equivalent definitions. Missing historical word records cannot be reconstructed.": "Cada palavra atual da coleção conta uma vez, usando a primeira tentativa da sua sessão concluída mais recente nesse modo. Palavras não praticadas e repetições automáticas são excluídas. Flashcards usa a sua última marcação; Study pode incluir definições equivalentes aceites. Registos históricos em falta por palavra não podem ser reconstruídos."
 };
