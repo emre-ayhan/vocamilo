@@ -250,7 +250,7 @@ class StudyRetryTest extends TestCase
         [$owner, $c, $words] = $this->fixture(3);
         $member = User::factory()->create();
         $c->forceFill(['share_uuid' => (string) Str::uuid()])->save();
-        $c->members()->attach($member);
+        $c->members()->attach($member, ['progress_consented_at' => now()]);
         $otherCollection = $owner->collections()->create(['title' => 'Other context']);
         $otherCollection->words()->attach($words->pluck('id'));
         $this->history($owner, $c, $words[0], true);

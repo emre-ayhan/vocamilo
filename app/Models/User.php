@@ -54,6 +54,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_admin' => 'boolean', 'suspended_at' => 'datetime', 'admin_disclosure_version' => 'integer', 'admin_disclosure_accepted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

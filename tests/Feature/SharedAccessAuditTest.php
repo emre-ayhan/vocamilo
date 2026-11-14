@@ -65,7 +65,7 @@ class SharedAccessAuditTest extends TestCase
     {
         [$owner, $collection] = $this->fixture();
         $member = User::factory()->create();
-        $collection->members()->attach($member);
+        $collection->members()->attach($member, ['progress_consented_at' => now()]);
         $settings = ['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 1];
         $ownerSession = $this->actingAs($owner)->postJson('/collections/'.$collection->id.'/sessions', ['mode' => 'study', 'settings' => $settings])->assertCreated()->json();
         $memberSettings = ['type' => 'choice', 'direction' => 'definition', 'order' => 'random', 'count' => 1];

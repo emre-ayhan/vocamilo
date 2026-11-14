@@ -91,14 +91,14 @@ function remove(word) {
 function destroy() { if (confirm(t('Delete this collection? Your words will stay in your pool.'))) router.delete(base.value); }
 function editNote(word) { noteWord.value = word; note.note = word.note ?? ''; note.clearErrors(); showNote.value = true; }
 function saveNote() { note.put(`/collections/${props.collection.id}/words/${noteWord.value.id}/note`, { preserveScroll: true, onSuccess: () => { showNote.value = false; } }); }
-function join() { router.post(`/s/${props.collection.share_uuid}/join`); }
+function join() { router.get(`/s/${props.collection.share_uuid}/join`); }
 useDialogEscape(() => { showAdd.value = false; showEdit.value = false; showNote.value = false;showVoice.value=false; });
 const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Flip. Recall. Repeat.' }, { mode: 'study', icon: '✦', name: 'Study', text: 'Practice at your own pace.' }, { mode: 'test', icon: '✓', name: 'Test', text: 'Find out what sticks.' }];
 </script>
 <template>
     <Head :title="collection.title" />
     <AppLayout :title="collection.title" :subtitle="collection.description" :shared="shared">
-        <template #actions><div class="actions">
+        <template #actions><div class="actions"><Link v-if="!shared&&!owner" :href="`/collections/${collection.id}/consent`" class="button secondary">{{t('Progress sharing choices')}}</Link>
             <button class="button secondary" @click="openVoice">{{t('Voice settings')}}</button><a v-if="!shared" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
             <button v-if="owner" class="button secondary" @click="voiceDraft=voiceMemory.read();showEdit = true">{{ t('Edit collection') }}</button>
             <span v-else class="pill dark">{{ t(shared ? 'SHARED COLLECTION' : 'SHARED WITH ME') }}</span>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Collection;
 use App\Models\StudySession;
+use App\Support\AdminAudit;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,11 @@ class CollectionController extends Controller
 {
     public function index(Request $r)
     {
-        return Inertia::render('Collections/Index', ['collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->withCount('words')->latest()->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id])]);
+        return Inertia::render('Collections/Index', ['collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->when($r->user()->is_admin, fn ($q) => $q->where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhereHas('user', fn ($q) => $q->where('admin_disclosure_version', 1)->whereNotNull('admin_disclosure_accepted_at'))))->withCount('words')->latest()->get()->each(function ($c) use ($r) {
+            if ($r->user()->is_admin) {
+                AdminAudit::record($r->user()->id, 'collection_index_item', $c->id);
+            }
+        })->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id])]);
     }
 
     public function store(Request $r)
@@ -47,16 +52,26 @@ class CollectionController extends Controller
     public function join(Request $r, string $uuid)
     {
         $c = $this->shared($uuid, true);
+        $r->validate(['progress_consent' => 'required|accepted']);
         if (! $r->user()) {
             $r->session()->put('pending_collection_uuid', $uuid);
+            $r->session()->put('pending_collection_progress_consent', true);
+            $r->session()->put('pending_collection_consent_expires_at', now()->addMinutes(30)->timestamp);
 
             return redirect('/login');
+        }
+        if ((int) $r->user()->admin_disclosure_version !== 1 || ! $r->user()->admin_disclosure_accepted_at) {
+            $r->session()->put('pending_collection_uuid', $uuid);
+            $r->session()->put('pending_collection_progress_consent', true);
+            $r->session()->put('pending_collection_consent_expires_at', now()->addMinutes(30)->timestamp);
+
+            return redirect('/account/disclosure');
         }
         DB::transaction(function () use ($c, $r, $uuid) {
             $locked = Collection::whereKey($c->id)->where('share_uuid', $uuid)->lockForUpdate()->firstOrFail();
             abort_if($locked->isBlocked($r->user()->id), 404);
             if ($locked->user_id !== $r->user()->id) {
-                $locked->members()->syncWithoutDetaching([$r->user()->id]);
+                $locked->members()->syncWithoutDetaching([$r->user()->id => ['progress_consented_at' => now()]]);
             }
         });
 

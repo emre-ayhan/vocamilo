@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collection;
+use App\Support\AdminAudit;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,7 +13,15 @@ class VocabularyController extends Controller
     {
         $accessible = Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))));
 
-        return Inertia::render('Dashboard', ['stats' => ['words' => $r->user()->words()->count(), 'collections' => (clone $accessible)->count(), 'shared' => $r->user()->collections()->whereNotNull('share_uuid')->count(), 'joined' => Collection::whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))->count()], 'collections' => (clone $accessible)->withCount('words')->latest()->take(6)->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id]), 'recentWords' => $r->user()->words()->latest()->take(5)->get()]);
+        if ($r->user()->is_admin) {
+            $accessible->where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhereHas('user', fn ($q) => $q->where('admin_disclosure_version', 1)->whereNotNull('admin_disclosure_accepted_at')));
+        }
+
+        return Inertia::render('Dashboard', ['stats' => ['words' => $r->user()->words()->count(), 'collections' => (clone $accessible)->count(), 'shared' => $r->user()->collections()->whereNotNull('share_uuid')->count(), 'joined' => (clone $accessible)->where('user_id', '!=', $r->user()->id)->count()], 'collections' => (clone $accessible)->withCount('words')->latest()->take(6)->get()->each(function ($c) use ($r) {
+            if ($r->user()->is_admin) {
+                AdminAudit::record($r->user()->id, 'collection_dashboard_item', $c->id);
+            }
+        })->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id]), 'recentWords' => $r->user()->words()->latest()->take(5)->get()]);
     }
 
     public function index(Request $r)

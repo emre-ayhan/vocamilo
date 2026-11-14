@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CollectionConsentController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\GoogleAuthController;
@@ -26,6 +27,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [VocabularyController::class, 'dashboard']);
     Route::get('/words/export', [ExportController::class, 'pool']);
+    Route::get('/collections/{collection}/consent', [CollectionConsentController::class, 'show']);
+    Route::post('/collections/{collection}/consent', [CollectionConsentController::class, 'accept']);
+    Route::delete('/collections/{collection}/membership', [CollectionConsentController::class, 'leave']);
+    Route::get('/collections/{collection}/progress', [CollectionConsentController::class, 'progress']);
     Route::get('/collections/{collection}/export', [ExportController::class, 'collection']);
     Route::get('/collections/{collection}/words', [CollectionController::class, 'words']);
     Route::get('/collections/{collection}/words/{word}/note', [CollectionController::class, 'getNote']);
@@ -57,6 +62,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/collections/{collection}/study', [CollectionController::class, 'study']);
 });
 Route::middleware('throttle:120,1')->group(function () {
+    Route::post('/s/{uuid}/join/cancel', [CollectionConsentController::class, 'cancelJoin']);
+    Route::get('/s/{uuid}/join', [CollectionConsentController::class, 'joinForm']);
     Route::post('/s/{uuid}/join', [CollectionController::class, 'join']);
     Route::get('/s/{uuid}/words', [CollectionController::class, 'publicWords']);
     Route::get('/s/{uuid}', [CollectionController::class, 'publicShow']);
@@ -64,3 +71,5 @@ Route::middleware('throttle:120,1')->group(function () {
 });
 
 Route::post('/locale', [LocaleController::class, 'update'])->middleware('throttle:30,1');
+
+require __DIR__.'/admin.php';

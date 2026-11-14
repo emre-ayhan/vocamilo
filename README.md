@@ -160,3 +160,21 @@ Guest mode cannot identify signed-out visitors, so a blocked person can still vi
 Collection owners open **Manage members** from sharing settings. Joined and blocked accounts have independent 15-row pages and a name-only search. Emails, notes and learning history are not included. The management route remains owner-only; removing, blocking and unblocking retain the access rules described above.
 
 Study and Test remember question direction(s), answer style(s), order and question count in this browser's local storage, separately for each account (or guest), collection and mode. Public-link sessions use the current link token as their collection scope. Guest choices are not inherited after login. Invalid/obsolete values fall back to safe defaults, and question count is capped to currently available words. Clearing or denying browser storage resets persistence but does not prevent practice. Read Aloud always starts off; voice preferences remain separately device-local. This update adds no database migration.
+
+### Administrator access and member progress consent
+
+After this update, existing and new accounts (including Google sign-in) must explicitly accept the administrator-access disclosure before using authenticated pages or APIs. Previously saved data is retained; it is not treated as consent. The disclosure can be revisited and withdrawn, which signs the person out and hides their data from future administrator views until they accept again. Guests can continue using guest-enabled shared links without storing results.
+
+Administrators use separate, sanitized management pages. They can search accounts, suspend/reactivate non-administrator accounts, inspect collection metadata and vocabulary, edit collection titles/descriptions, and disable sharing. There is no administrator private-note or export endpoint, no web role assignment, and no permanent deletion action. Administrator collection list/detail/change access is recorded in `admin_audit_logs` with actor, target identifiers, action and time, not word/note content. Accounts that have not accepted the current disclosure are excluded from administrator views. Suspension blocks authenticated access; it cannot identify someone browsing as a signed-out guest.
+
+Collection membership requires a separate, unchecked consent to show **past and future results for that collection** to its owner. Existing members must make this choice on their next private collection access. Owners see aggregate progress only for currently joined, unblocked, unsuspended members who accepted both disclosures. Personal notes, raw answers and other collections' results are never included. Members can revisit the consent page and leave to stop future owner visibility; history and notes are retained privately and are not deleted. Rejoining with consent can expose the retained results again. Withdrawing access cannot retract information somebody already saw. Pending guest-join consent expires after 30 minutes and is cleared by the explicit decline action, including when returning from login.
+
+These controls apply to application routes, not to people with direct database/server access. Private notes remain stored in the database, not end-to-end encrypted. Audit records are retained without an automatic expiry; protect and back up the database and restrict server access. Rolling back these migrations loses the new consent, administrator-role and audit fields; take a database backup before migration or rollback.
+
+Deployment: back up the database, pull the code, run `php artisan migrate --force`, rebuild frontend assets, and clear any stale Laravel caches. No account is automatically made an administrator. To deliberately appoint the first administrator, an authorized operator runs the following **interactively on the server**, naming an existing active account and confirming the displayed email:
+
+```sh
+php artisan vocamilo:first-admin owner@example.com
+```
+
+Replace the placeholder with the intended account. The command rejects non-interactive execution and refuses if an administrator already exists. It does not bypass the access disclosure. The assistant has not run this command against a deployed database or assigned any real account a role.

@@ -32,7 +32,7 @@ class VocabularyTest extends TestCase
 
     public function test_registration_hashes_password_and_authenticates_user(): void
     {
-        $this->post('/register', ['name' => 'Learner', 'email' => 'LEARNER@example.com', 'password' => 'long-password', 'password_confirmation' => 'long-password'])->assertRedirect('/dashboard');
+        $this->post('/register', ['name' => 'Learner', 'email' => 'LEARNER@example.com', 'password' => 'long-password', 'password_confirmation' => 'long-password'])->assertRedirect('/account/disclosure');
         $user = User::firstOrFail();
         $this->assertSame('learner@example.com', $user->email);
         $this->assertTrue(Hash::check('long-password', $user->password));

@@ -444,5 +444,11 @@
   "Member removed. They can join again using the link.": "Membro removido. Pode voltar a aderir através do link.",
   "Sharing access updated.": "Acesso de partilha atualizado.",
   "Sharing link replaced. Existing members keep access.": "Link de partilha substituído. Os membros atuais mantêm o acesso.",
-  "Sharing enabled. Personal notes stay private.": "Partilha ativada. As notas pessoais permanecem privadas."
+  "Sharing enabled. Personal notes stay private.": "Partilha ativada. As notas pessoais permanecem privadas.",
+  "Account updated.": "Conta atualizada.",
+  "Administrator accounts cannot be suspended here.": "As contas de administrador não podem ser suspensas aqui.",
+  "Membership removed. Your private notes and study history have been preserved.": "Associação removida. As suas notas privadas e o histórico de estudo foram preservados.",
+  "Please review the administrator access disclosure.": "Reveja a informação sobre o acesso dos administradores.",
+  "Sharing disabled.": "Partilha desativada.",
+  "This account is suspended.": "Esta conta está suspensa."
 }

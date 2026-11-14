@@ -25,7 +25,7 @@ function unblockMember(person){
 }
 </script>
 <template>
-<Head :title="t('Manage members')"/><AppLayout :title="t('Manage members')" :subtitle="collection.title"><template #actions><Link class="button secondary" :href="base">{{t('← Collection')}}</Link></template>
+<Head :title="t('Manage members')"/><AppLayout :title="t('Manage members')" :subtitle="collection.title"><template #actions><Link :href="`${base}/progress`" class="button secondary">{{t('Member progress')}}</Link><Link class="button secondary" :href="base">{{t('← Collection')}}</Link></template>
 <div class="members-page" :aria-busy="sharingBusy"><Errors :errors="sharingErrors"/>
 <p v-if="sharing.access==='guests'" class="notice">{{t('Guest access cannot identify signed-out visitors. A blocked account can still view the collection while signed out. Choose signed-in access to enforce account blocking.')}}</p>
 <form class="member-search panel" @submit.prevent="search"><label>{{t('Search accounts by name')}}<input v-model="query" type="search" maxlength="100" :placeholder="t('Enter a name')"/></label><button class="button" :disabled="sharingBusy">{{t('Search')}}</button><button v-if="query" type="button" class="button secondary" :disabled="sharingBusy" @click="query='';search()">{{t('Clear search')}}</button></form>

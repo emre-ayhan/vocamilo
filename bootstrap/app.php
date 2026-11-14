@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuditAdministratorCollections;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequireAccountDisclosure;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [SetLocale::class, HandleInertiaRequests::class]);
+        $middleware->web(append: [SetLocale::class, HandleInertiaRequests::class, RequireAccountDisclosure::class, AuditAdministratorCollections::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

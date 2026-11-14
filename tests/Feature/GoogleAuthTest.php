@@ -45,7 +45,7 @@ class GoogleAuthTest extends TestCase
     public function test_new_verified_gmail_user_is_created_and_signed_in(): void
     {
         $this->providerUser('LEARNER@gmail.com');
-        $this->get('/auth/google/callback')->assertRedirect('/dashboard');
+        $this->get('/auth/google/callback')->assertRedirect('/account/disclosure');
         $user = User::firstOrFail();
         $this->assertAuthenticatedAs($user);
         $this->assertSame('learner@gmail.com', $user->email);
@@ -57,14 +57,14 @@ class GoogleAuthTest extends TestCase
     public function test_verified_workspace_user_is_authoritative(): void
     {
         $this->providerUser('learner@school.example', 'workspace-subject', ['email_verified' => true, 'hd' => 'school.example']);
-        $this->get('/auth/google/callback')->assertRedirect('/dashboard');
+        $this->get('/auth/google/callback')->assertRedirect('/account/disclosure');
         $this->assertNotNull(User::firstOrFail()->email_verified_at);
     }
 
     public function test_google_verified_third_party_email_does_not_become_locally_verified(): void
     {
         $this->providerUser('learner@example.com');
-        $this->get('/auth/google/callback')->assertRedirect('/dashboard');
+        $this->get('/auth/google/callback')->assertRedirect('/account/disclosure');
         $this->assertNull(User::firstOrFail()->email_verified_at);
         $this->assertAuthenticated();
     }
@@ -72,7 +72,7 @@ class GoogleAuthTest extends TestCase
     public function test_legacy_google_verified_email_claim_is_supported(): void
     {
         $this->providerUser('learner@gmail.com', 'google-subject-1', ['verified_email' => true]);
-        $this->get('/auth/google/callback')->assertRedirect('/dashboard');
+        $this->get('/auth/google/callback')->assertRedirect('/account/disclosure');
         $this->assertAuthenticated();
     }
 
@@ -291,7 +291,7 @@ class GoogleAuthTest extends TestCase
         $handler->push(Middleware::history($history));
         $http = new Client(['handler' => $handler]);
         Socialite::shouldReceive('driver')->once()->with('google')->andReturnUsing(fn () => (new GoogleProvider(request(), 'test-client', 'test-secret', 'http://localhost/auth/google/callback'))->setHttpClient($http));
-        $this->withSession(['state' => 'matching-state', 'code_verifier' => str_repeat('v', 64)])->get('/auth/google/callback?state=matching-state&code=fake-code&email=attacker@example.com')->assertRedirect('/dashboard')->assertSessionMissing('state')->assertSessionMissing('code_verifier');
+        $this->withSession(['state' => 'matching-state', 'code_verifier' => str_repeat('v', 64)])->get('/auth/google/callback?state=matching-state&code=fake-code&email=attacker@example.com')->assertRedirect('/account/disclosure')->assertSessionMissing('state')->assertSessionMissing('code_verifier');
         $this->assertCount(2, $history);
         parse_str((string) $history[0]['request']->getBody(), $body);
         $this->assertSame('fake-code', $body['code']);

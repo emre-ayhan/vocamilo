@@ -17,7 +17,7 @@ const active=(path)=>page.url.split('?')[0]===path || (path!=='/dashboard' && pa
 <Link href="/dashboard" :class="{active:active('/dashboard')}"><span>◫</span> {{t("Overview")}}</Link>
 <Link href="/words" :class="{active:active('/words')}"><span>≋</span> {{t("Word pool")}}</Link>
 <Link href="/collections" :class="{active:active('/collections')}"><span>▤</span> {{t("Collections")}}</Link>
-<Link href="/logout" method="post" as="button" class="mobile-logout">{{t("Sign out")}}</Link></nav>
+<Link href="/account/disclosure">{{t("Privacy choices")}}</Link><Link v-if="page.props.auth?.user?.is_admin" href="/admin/users" :class="{active:active('/admin')}">{{t("Administration")}}</Link><Link href="/logout" method="post" as="button" class="mobile-logout">{{t("Sign out")}}</Link></nav>
 <div v-else class="sidebar-public"><span class="pill">{{t("SHARED COLLECTION")}}</span><p>{{t("A good word is worth sharing.")}}</p><Link href="/register" class="button secondary">{{t("Create your own space")}}</Link></div>
 <div class="sidebar-bottom"><InstallApp/><div class="small-label">{{t("MAKE ROOM FOR NEW WORDS.")}}</div><p>{{t("Learn a little.")}}<br>{{t("Remember a lot.")}}</p><div class="sidebar-language"><LanguageSwitch/></div><Link v-if="page.props.auth?.user" href="/logout" method="post" as="button" class="logout">{{t('Sign out')}} · {{ page.props.auth.user.name }}</Link></div>
 </aside>
