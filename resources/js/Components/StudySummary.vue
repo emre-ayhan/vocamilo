@@ -1,4 +1,5 @@
 <script setup>
+import StartIcon from "./StartIcon.vue";
 import { Link } from "@inertiajs/vue3";
 import { useI18n } from "../lib/i18n.js";
 const {t,locale}=useI18n();
@@ -17,7 +18,7 @@ function date(value) { return value ? new Date(value).toLocaleString(locale.valu
                 <p class="muted small">{{ date(summary.modes[mode]?.last?.completed_at) }}</p>
                 <p v-if="mode === 'test' && summary.modes[mode]?.best_percent !== null && summary.modes[mode]?.best_percent !== undefined">{{t('Best:')}} {{ Math.round(summary.modes[mode].best_percent) }}%</p>
                 <p v-if="mode === 'flashcards'" class="muted small">{{t("Self-assessed, not a test score.")}}</p>
-                <Link :href="`${base}/study?mode=${mode}`" class="button history-start" :aria-label="t('Start {mode} →', {mode:t(label)})">{{ t('Start →') }}</Link>
+                <Link :href="`${base}/study?mode=${mode}`" class="button history-start" :aria-label="t('Start {mode} →', {mode:t(label)})">{{ t('Start') }}<StartIcon/></Link>
             </article>
         </div>
         <p class="muted small summary-explanation">{{t("Each current collection word counts once, using your latest completed first attempt in that mode. Unpracticed words and automatic retries are excluded. Flashcards use your latest known mark; Study can include accepted equivalent definitions. Missing historical word records cannot be reconstructed.")}}</p>

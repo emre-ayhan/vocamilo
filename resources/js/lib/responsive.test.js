@@ -68,3 +68,20 @@ test('progress summary shows latest word totals in mode cards without a separate
  assert.match(summary,/summary.modes\[mode\]\?\.count/);
  assert.match(summary,/class="button history-start"/);
 });
+test('mobile install has breathing room and login language sits opposite logo',()=>{
+ const install=readFileSync(new URL('../Components/InstallApp.vue',import.meta.url),'utf8');
+ const login=readFileSync(new URL('../Pages/Auth/Login.vue',import.meta.url),'utf8');
+ assert.match(install, /max-width:760px\)\{\.install-app\{margin:20px 0 18px/);
+ assert.match(login,/login-shell .auth-language\{position:absolute;top:25px;right:20px/);
+ assert.equal((login.match(/<LanguageSwitch\/>/g)||[]).length,1);
+});
+test('guest Start is larger and right aligned; Start icons replace long visual arrows',()=>{
+ const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
+ assert.match(show,/guest-start\{align-self:flex-end/);
+ assert.match(show,/min-width:112px;min-height:44px/);
+ for(const path of ['../Pages/Collections/Show.vue','../Components/StudySummary.vue','../Pages/Study/Session.vue']){
+ const s=readFileSync(new URL(path,import.meta.url),'utf8');
+ assert.match(s,/<StartIcon\/>/);
+ assert.doesNotMatch(s,/}}<\/b>.*Start →/);
+ }
+});

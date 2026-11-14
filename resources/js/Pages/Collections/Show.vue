@@ -1,4 +1,5 @@
 <script setup>
+import StartIcon from "../../Components/StartIcon.vue";
 import StudySummary from '../../Components/StudySummary.vue';
 import WordPicker from '../../Components/WordPicker.vue';
 import { useDialogEscape } from '../../lib/dialog.js';
@@ -82,7 +83,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
             <button class="button" @click="join">{{ t(authenticated ? 'Join collection' : 'Sign in to join') }}</button>
         </section>
         <StudySummary v-if="!shared" :summary="summary" :base="base" />
-        <div v-if="shared" class="mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><span>{{ item.icon }}</span><h3>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p><b>{{ t('Start →') }}</b></Link></div>
+        <div v-if="shared" class="mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><span>{{ item.icon }}</span><h3>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p><b class="guest-start">{{ t('Start') }}<StartIcon/></b></Link></div>
         <section v-if="owner" class="sharing panel">
             <div><span class="eyebrow">{{ t('KNOWLEDGE IS BETTER SHARED') }}</span><h3>{{ t(collection.share_uuid ? 'Your link is ready.' : 'Keep it private. Or pass it on.') }}</h3><p class="muted">{{ t(collection.share_uuid ? 'Anyone with this link can study without signing in. Your private notes stay private.' : 'Turn on link sharing whenever you want. Your personal notes are never shared.') }}</p></div>
             <div class="actions"><button v-if="!collection.share_uuid" class="button secondary" @click="router.post(`${base}/sharing`)">{{ t('Enable link sharing') }}</button><template v-else><button class="button" @click="copy">{{ t('Copy link') }}</button><button class="text-button danger" @click="disable">{{ t('Turn off') }}</button></template></div>
@@ -100,3 +101,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
         <div v-if="showNote && !shared" class="modal-backdrop" @click.self="showNote = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="note-title"><div class="section-heading"><h2 id="note-title">{{ t('Your private note') }}</h2><button class="icon-button" :aria-label="t('Close')" @click="showNote = false">×</button></div><p>{{ noteWord?.term }}</p><form @submit.prevent="saveNote"><Errors :errors="note.errors" /><label>{{ t('Note') }}<textarea v-model="note.note" rows="4" maxlength="5000" /></label><p class="muted small">{{ t('Only you can see this note. It does not change the original definition.') }}</p><div class="form-actions"><button type="button" class="button secondary" @click="showNote = false">{{ t('Cancel') }}</button><button class="button" :disabled="note.processing">{{ t('Save note') }}</button></div></form></section></div>
     </AppLayout>
 </template>
+
+<style scoped>
+.mode-card{display:flex;flex-direction:column}.mode-card .guest-start{align-self:flex-end;justify-content:center;gap:8px;min-width:112px;min-height:44px;padding:12px 20px;font-size:14px;margin-top:auto}
+</style>

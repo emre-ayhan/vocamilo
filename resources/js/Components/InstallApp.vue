@@ -15,5 +15,5 @@ async function install(){
 </script>
 <template><div v-if="!appInstalled" class="install-app"><button type="button" class="button secondary" :disabled="busy" @click="install">{{t('Install Vocamilo')}}</button><p v-if="help" role="status">{{t('Use your browser’s Install app option. On iPhone or iPad, open Safari, tap Share, then Add to Home Screen.')}} {{t('An internet connection is required. No notifications or offline storage are enabled.')}}</p></div></template>
 <style scoped>
-.install-app{margin:0 0 24px}.install-app .button{width:100%;border-color:#7c9a94;color:#eaf4ed;padding:9px 12px;font-size:12px}.install-app p{font-size:12px;line-height:1.5;color:#c5d4ce;margin-top:12px}.install-app .button:hover{background:#25424c}@media(max-width:760px){.install-app{margin:0 0 14px}.install-app .button{width:100%}}
+.install-app{margin:0 0 24px}.install-app .button{width:100%;border-color:#7c9a94;color:#eaf4ed;padding:9px 12px;font-size:12px}.install-app p{font-size:12px;line-height:1.5;color:#c5d4ce;margin-top:12px}.install-app .button:hover{background:#25424c}@media(max-width:760px){.install-app{margin:20px 0 18px}.install-app .button{width:100%}}
 </style>
