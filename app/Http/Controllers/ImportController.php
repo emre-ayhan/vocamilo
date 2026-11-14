@@ -38,7 +38,7 @@ class ImportController extends Controller
     {
         $d = $r->validate(['collection_id' => 'nullable|integer']);
         $preview = $r->session()->get('csv_preview');
-        abort_unless($preview && $preview['user_id'] === $r->user()->id && $preview['expires_at'] >= time(), 422, 'Preview expired. Upload the CSV again.');
+        abort_unless($preview && $preview['user_id'] === $r->user()->id && $preview['expires_at'] >= time(), 422, __('Preview expired. Upload the CSV again.'));
         $c = isset($d['collection_id']) ? $r->user()->collections()->findOrFail($d['collection_id']) : null;
         DB::transaction(function () use ($r, $preview, $c) {
             foreach ($preview['rows'] as $row) {

@@ -12,6 +12,6 @@ class StudyAnswer extends Model
 
     protected function casts(): array
     {
-        return ['correct' => 'boolean', 'self_assessed' => 'boolean'];
+        return ['attempt_no' => 'integer', 'question_index' => 'integer', 'correct' => 'boolean', 'self_assessed' => 'boolean'];
     }
 }

@@ -28,18 +28,18 @@ class CsvVocabulary
                 $term = trim($row[$termColumn] ?? '');
                 $definition = trim($row[$definitionColumn] ?? '');
                 if (! mb_check_encoding($term.$definition, 'UTF-8') || $term === '' || $definition === '' || mb_strlen($term) > 500 || mb_strlen($definition) > 5000) {
-                    throw ValidationException::withMessages(['file' => "Invalid term or definition on CSV row {$line}. Use UTF-8, with nonempty term and definition columns."]);
+                    throw ValidationException::withMessages(['file' => __('Invalid term or definition on CSV row :row. Use UTF-8, with nonempty term and definition columns.', ['row' => $line])]);
                 }
                 $rows[] = ['term' => $term, 'definition' => $definition];
                 if (count($rows) > 2000) {
-                    throw ValidationException::withMessages(['file' => 'Import up to 2,000 words at a time.']);
+                    throw ValidationException::withMessages(['file' => __('Import up to 2,000 words at a time.')]);
                 }
             }
         } finally {
             fclose($h);
         }
         if (! $rows) {
-            throw ValidationException::withMessages(['file' => 'The CSV contains no words.']);
+            throw ValidationException::withMessages(['file' => __('The CSV contains no words.')]);
         }
 
         return ['rows' => $rows, 'headers' => $headers];

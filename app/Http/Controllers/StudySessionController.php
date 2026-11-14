@@ -43,17 +43,27 @@ class StudySessionController extends Controller
         $answerKey = $settings['direction'] === 'definition' ? 'definition' : 'term';
         $promptKey = $answerKey === 'term' ? 'definition' : 'term';
         $ordered = $settings['order'] === 'random' ? $words->shuffle() : $words;
+        if ($d['mode'] === 'study') {
+            $history = DB::table('study_answers as a')->join('study_sessions as s', 's.id', '=', 'a.study_session_id')->where('s.collection_id', $c->id)->where('s.user_id', $r->user()->id)->where('s.mode', 'study')->whereNotNull('s.completed_at')->where('a.attempt_no', 1)->whereNotNull('a.word_id')->orderByDesc('s.completed_at')->orderByDesc('a.id')->get(['a.word_id', 'a.correct']);
+            $known = [];
+            foreach ($history as $row) {
+                if (! array_key_exists($row->word_id, $known)) {
+                    $known[$row->word_id] = (bool) $row->correct;
+                }
+            }
+            $ordered = $ordered->filter(fn ($w) => ! ($known[$w->id] ?? false))->concat($ordered->filter(fn ($w) => $known[$w->id] ?? false))->values();
+        }
         $questions = $ordered->take($settings['count'])->map(function ($w) use ($words, $settings, $answerKey, $promptKey) {
             $others = $words->pluck($answerKey)->unique(fn ($v) => self::normalize($v))->filter(fn ($v) => self::normalize($v) !== self::normalize($w->$answerKey))->shuffle()->take(3);
 
             return ['id' => $w->id, 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $settings['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written', 'options' => $others->push($w->$answerKey)->shuffle()->values()->all()];
         })->values()->all();
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions)]);
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 2 : 1]);
         // Notes may be displayed privately, but are not copied into historical data.
         $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
 
-        return response()->json(['id' => $session->id, 'questions' => $display], 201);
+        return response()->json(['id' => $session->id, 'questions' => $display, 'rules_version' => $session->rules_version], 201);
     }
 
     public function complete(Request $r, int $collection, string $session)
@@ -65,6 +75,9 @@ class StudySessionController extends Controller
             if ($s->completed_at) {
                 return response()->json($this->completed($s));
             }
+            if ($s->mode === 'study' && $s->rules_version >= 2) {
+                return $this->completeStudy($r, $s);
+            }
             $d = $r->validate(['answers' => 'required|array|size:'.$s->total_count, 'answers.*' => 'required|array:word_id,answer,known,self_assessed', 'answers.*.word_id' => 'required|integer|distinct', 'answers.*.answer' => 'nullable|string|max:5000', 'answers.*.known' => 'sometimes|boolean', 'answers.*.self_assessed' => 'sometimes|boolean']);
             $byId = collect($d['answers'])->keyBy('word_id');
             $correct = 0;
@@ -73,27 +86,27 @@ class StudySessionController extends Controller
             foreach ($s->questions as $i => $q) {
                 $a = $byId->get($q['id']);
                 if (! $a) {
-                    throw ValidationException::withMessages(['answers' => 'Answers must match every question in this session.']);
+                    throw ValidationException::withMessages(['answers' => __('Answers must match every question in this session.')]);
                 }
                 $self = (bool) ($a['self_assessed'] ?? false);
                 if ($self && ! ($s->mode === 'study' && $q['type'] === 'written' && $q['answerKey'] === 'definition')) {
-                    throw ValidationException::withMessages(['answers' => 'Self assessment is allowed only for written definitions in Study.']);
+                    throw ValidationException::withMessages(['answers' => __('Self assessment is allowed only for written definitions in Study.')]);
                 }
                 if ($s->mode === 'flashcards') {
                     if (! array_key_exists('known', $a)) {
-                        throw ValidationException::withMessages(['answers' => 'Mark each flashcard known or still learning.']);
+                        throw ValidationException::withMessages(['answers' => __('Mark each flashcard known or still learning.')]);
                     }
                     $isCorrect = (bool) $a['known'];
                     $self = true;
                 } else {
                     if (isset($a['known'])) {
-                        throw ValidationException::withMessages(['answers' => 'Known marks are only allowed for flashcards.']);
+                        throw ValidationException::withMessages(['answers' => __('Known marks are only allowed for flashcards.')]);
                     }
                     if (! filled($a['answer'] ?? null)) {
-                        throw ValidationException::withMessages(['answers' => 'Answer every question.']);
+                        throw ValidationException::withMessages(['answers' => __('Answer every question.')]);
                     }
                     if ($q['type'] === 'choice' && ! in_array($a['answer'], $q['options'], true)) {
-                        throw ValidationException::withMessages(['answers' => 'Choose one of the offered answers.']);
+                        throw ValidationException::withMessages(['answers' => __('Choose one of the offered answers.')]);
                     }
                     $isCorrect = self::normalize($a['answer']) === self::normalize($q['expected']) || $self;
                 }
@@ -101,18 +114,69 @@ class StudySessionController extends Controller
                 $assessed += (int) $self;
                 $s->answers()->create(['word_id' => in_array($q['id'], $existingIds, true) ? $q['id'] : null, 'position' => $i, 'prompt' => $q['prompt'], 'expected' => $q['expected'], 'answer' => $a['answer'] ?? null, 'correct' => $isCorrect, 'self_assessed' => $self]);
             }
-            $s->update(['correct_count' => $correct, 'self_assessed_count' => $assessed, 'completed_at' => now()]);
+            $s->update(['correct_count' => $correct, 'self_assessed_count' => $assessed, 'completed_at' => now(), 'total_attempts' => $s->total_count]);
 
             return response()->json($this->completed($s));
         });
+    }
+
+    private function completeStudy(Request $r, StudySession $s)
+    {
+        $d = $r->validate(['answers' => 'required|array|min:1|max:20000', 'answers.*' => 'required|array:word_id,attempt_no,answer,self_assessed', 'answers.*.word_id' => 'required|integer', 'answers.*.attempt_no' => 'required|integer|min:1', 'answers.*.answer' => 'required|string|max:5000', 'answers.*.self_assessed' => 'sometimes|boolean']);
+        $queue = array_keys($s->questions);
+        $attempts = [];
+        $correct = 0;
+        $assessed = 0;
+        $existing = Word::whereIn('id', array_column($s->questions, 'id'))->pluck('id')->all();
+        foreach ($d['answers'] as $position => $a) {
+            if (! isset($queue[$position])) {
+                throw ValidationException::withMessages(['answers' => __('Unexpected extra attempt.')]);
+            }
+            $qi = $queue[$position];
+            $q = $s->questions[$qi];
+            $number = ($attempts[$qi] ?? 0) + 1;
+            if ($a['word_id'] != $q['id'] || $a['attempt_no'] != $number) {
+                throw ValidationException::withMessages(['answers' => __('Follow the session question and retry order.')]);
+            }
+            $attempts[$qi] = $number;
+            $self = (bool) ($a['self_assessed'] ?? false);
+            if ($self && ! ($q['type'] === 'written' && $q['answerKey'] === 'definition')) {
+                throw ValidationException::withMessages(['answers' => __('Self assessment is allowed only for written definitions in Study.')]);
+            }
+            if (! filled(trim($a['answer']))) {
+                throw ValidationException::withMessages(['answers' => __('Answer every question.')]);
+            }
+            if ($q['type'] === 'choice' && ! in_array($a['answer'], $q['options'], true)) {
+                throw ValidationException::withMessages(['answers' => __('Choose one of the offered answers.')]);
+            }
+            $right = self::normalize($a['answer']) === self::normalize($q['expected']) || $self;
+            if ($number === 1) {
+                $correct += (int) $right;
+                $assessed += (int) $self;
+            }
+            // Keep at most one pending occurrence per word for interleaved practice.
+            // Attempt two always schedules attempt three, even if it is correct.
+            if (($number === 1 && ! $right) || $number === 2 || ($number >= 3 && ! $right)) {
+                $queue[] = $qi;
+            }
+            $s->answers()->create(['word_id' => in_array($q['id'], $existing, true) ? $q['id'] : null, 'position' => $position, 'question_index' => $qi, 'attempt_no' => $number, 'prompt' => $q['prompt'], 'expected' => $q['expected'], 'answer' => $a['answer'], 'correct' => $right, 'self_assessed' => $self]);
+        }
+        if (count($d['answers']) !== count($queue)) {
+            throw ValidationException::withMessages(['answers' => __('Finish all questions and required retries before saving.')]);
+        }
+        $s->update(['correct_count' => $correct, 'self_assessed_count' => $assessed, 'completed_at' => now(), 'total_attempts' => count($d['answers'])]);
+
+        return response()->json($this->completed($s));
     }
 
     private function completed(StudySession $s): array
     {
         $answers = $s->answers()->orderBy('position')->get();
 
-        return ['session' => $s->result(), 'results' => $answers->map(function ($a) use ($s) {
-            return $s->questions[$a->position] + ['answer' => $a->answer ?? '', 'correct' => $a->correct, 'self_assessed' => $a->self_assessed];
-        })->all()];
+        $results = $answers->map(function ($a) use ($s) {
+            return $s->questions[$a->question_index ?? $a->position] + ['attempt_no' => $a->attempt_no, 'first_attempt' => $a->attempt_no === 1, 'answer' => $a->answer ?? '', 'correct' => $a->correct, 'self_assessed' => $a->self_assessed];
+        })->all();
+
+        return ['session' => $s->result(), 'results' => $results, 'first_results' => array_values(array_filter($results, fn ($r) => $r['first_attempt']))];
     }
 }

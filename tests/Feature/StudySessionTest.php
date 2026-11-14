@@ -58,7 +58,11 @@ class StudySessionTest extends TestCase
 
     private function start($collection, string $mode = 'study', array $settings = [], array $extra = []): array
     {
-        return $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode, 'settings' => $this->settings($settings)] + $extra)->assertCreated()->json();
+        $session = $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode, 'settings' => $this->settings($settings)] + $extra)->assertCreated()->json();
+        // This suite retains the historical v1 contract; StudyRetryTest covers v2.
+        StudySession::findOrFail($session['id'])->update(['rules_version' => 1]);
+
+        return $session;
     }
 
     private function finish($collection, array $session, array $answers)

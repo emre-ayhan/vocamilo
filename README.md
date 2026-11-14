@@ -118,3 +118,11 @@ This version intentionally registers **no service worker**, enables no offline m
 Study has a Read aloud switch above the questions, off by default. Choose an installed local voice matching your vocabulary's language, then enable it; the interface language does not determine pronunciation. Questions and selected answers are spoken using the browser's Speech Synthesis API; written answers are read on Check. Changing question, switching off or leaving the page cancels prior speech.
 
 Only voices explicitly reported by the browser as `localService: true` are offered, with no network voice fallback and no server speech endpoint. If the API or local voices are unavailable the control explains why and stays disabled. Device voices can load asynchronously; availability and pronunciation depend on the browser/OS. Real-device audio and installed-app behavior still need acceptance testing. Read-aloud starts disabled whenever the Study page is opened.
+
+## Study repetition and next-session priority
+
+New Study sessions prioritize words not yet studied or answered incorrectly on the learner's latest first attempt in this collection. Known words fill only the remaining requested places; this does not affect Test/Flashcards. Guest priority lasts only while the current page stays open, and member histories remain separate.
+
+A wrong first Study answer schedules at least two extra presentations, interleaved behind other pending questions. If the last repeat is still wrong it returns again until answered correctly. The first-attempt score is preserved; repeated answers are recorded separately and cannot inflate it. Correcting a word during repeats does not lower its priority for the next Study until its first attempt in a later session is correct. Self-assessed equivalent written definitions keep their existing behavior.
+
+“End study without saving” lets the learner leave an unfinished round without claiming completion. No session is saved as completed until the required queue ends. This release adds an attempt/rules-version migration; existing completed history and already-started legacy sessions retain their old format. Back up the database, deploy the migration and rebuild assets together. Reload old open Study pages after upgrading to use the new rules.

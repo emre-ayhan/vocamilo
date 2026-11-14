@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -43,5 +44,14 @@ class LocaleTest extends TestCase
     public function test_guest_invalid_cookie_falls_back_to_english(): void
     {
         $this->withCookie('locale', 'fr')->get('/login')->assertInertia(fn (Assert $page) => $page->where('locale', 'en'));
+    }
+
+    public function test_csv_errors_translate_dynamic_rows_and_expired_preview(): void
+    {
+        $user = User::factory()->create(['locale' => 'pt']);
+        $file = UploadedFile::fake()->createWithContent('words.csv', "term,definition\n,missing term\n");
+        $response = $this->actingAs($user)->postJson('/imports/preview', ['file' => $file, 'has_header' => true]);
+        $response->assertUnprocessable()->assertJsonPath('errors.file.0', 'Palavra ou definição inválida na linha 2 do CSV. Utilize UTF-8 e preencha as colunas de palavra e definição.');
+        $this->postJson('/imports/store')->assertUnprocessable()->assertJsonPath('message', 'A pré-visualização expirou. Carregue novamente o CSV.');
     }
 }
