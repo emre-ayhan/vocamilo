@@ -31,3 +31,16 @@ test('editor is private, blocks duplicate saves, preserves failed draft and supp
  assert.match(editor,/controller\?\.abort\(\)/);
  assert.match(editor,/await wordNote\(url\(\),\{note:draft.value/);
 });
+
+test('flashcard note editor spans below its Add Note and Read Aloud toolbar',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const component=readFileSync(new URL('../Components/FlashcardNote.vue',import.meta.url),'utf8');
+ const session=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+ assert.match(component,/<slot name="tools"\/><\/div>/);
+ assert.match(component,/:aria-expanded="open"/);
+ assert.match(component,/:disabled="open\|\|loading\|\|saving"/);
+ assert.ok(component.indexOf('<form v-if="open"')>component.indexOf('<slot name="tools"'));
+ assert.match(component,/\.flash-note form\{margin-top:12px;width:100%;box-sizing:border-box\}/);
+ assert.match(session,/<template #tools><label class="speech-toggle">/);
+ assert.match(session,/<\/FlashcardNote><label v-else class="speech-toggle">/);
+});
