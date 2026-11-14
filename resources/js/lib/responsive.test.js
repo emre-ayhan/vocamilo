@@ -35,3 +35,9 @@ test('one compact language switch precedes the sidebar footer and moves opposite
     assert.match(layout, /sidebar-language\{position:absolute;top:18px;right:20px/);
     assert.doesNotMatch(layout, /class="header-actions"><LanguageSwitch/);
 });
+test('compact switch uses the actual navy theme and logo lime', () => {
+    const source = readFileSync(new URL('../Components/LanguageSwitch.vue', import.meta.url), 'utf8');
+    assert.match(source, /border:1px solid #aec0c7[^}]*background:#122c3b/);
+    assert.match(source, /aria-pressed=true\]\{background:#d5f1ad;color:#15372f/);
+    assert.match(source, /min-height:28px/);
+});
