@@ -509,5 +509,8 @@ export default {
 "Withdrawing stops future administrator visibility in the app. It cannot retract information already viewed or erase access logs.":"A retirada impede a visibilidade administrativa futura na aplicação. Não pode retirar informações já consultadas nem apagar registos de acesso.",
 "The owner can also search members by all or part of an email address. Your email is not displayed, but matching results can reveal or confirm your email address.":"O proprietário também pode pesquisar membros usando a totalidade ou parte de um endereço de email. O seu email não é apresentado, mas os resultados correspondentes podem revelar ou confirmar o seu endereço de email.",
 "I agree to share my existing and future progress and allow email-based matching by this collection\u2019s owner.":"Concordo em partilhar o meu progresso anterior e futuro e permitir a pesquisa por email pelo proprietário desta coleção.",
-"Search accounts by name or email":"Pesquisar contas por nome ou email"
+"Search accounts by name or email":"Pesquisar contas por nome ou email",
+"Saved voice unavailable or ambiguous. Choose a local voice again.":"A voz guardada está indisponível ou é ambígua. Escolha novamente uma voz local.",
+"Only voices exposed by this browser can be selected. Device voice settings may not be exposed or honored by the browser.":"Só podem ser selecionadas vozes disponibilizadas por este navegador. As definições de voz do dispositivo podem não estar disponíveis ou não ser respeitadas pelo navegador.",
+"This browser reports indistinguishable local voices. Reading aloud is unavailable until it provides a unique voice.":"Este navegador apresenta vozes locais indistinguíveis. A leitura em voz alta não está disponível até existir uma voz identificável de forma única."
 };

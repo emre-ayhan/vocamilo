@@ -8,7 +8,7 @@ import { createStudyQueue,appendStudyRepeat,studyAttemptPayload,prioritizeGuestW
 import { postSession, sessionAnswers } from '../../lib/session-api.js';
 import { useI18n } from '../../lib/i18n.js';
 import { computed,ref,onMounted,onBeforeUnmount,watch } from 'vue';
-import { createLocalSpeech,localVoices } from '../../lib/speech.js';import { Head,Link,usePage } from '@inertiajs/vue3';
+import { createLocalSpeech,localVoices,resolveLocalVoice,observeVoiceChanges } from '../../lib/speech.js';import { Head,Link,usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';import { createQuestions,isCorrect,score,shouldAutoCheck } from '../../lib/study.js';
 const {t}=useI18n();
 const props=defineProps({collection:Object,words:{type:Array,default:()=>[]},mode:{type:String,default:'flashcards'},shared:{type:Boolean,default:false},settings:{type:Object,default:()=>({})}});
@@ -29,21 +29,21 @@ const attempts=ref([]),guestLearned=new Set(),stopped=ref(false);
 const sessionId=ref(null),busy=ref(false),saveState=ref(''),sessionError=ref(''),selfAssessed=ref(false);
 const speechEnabled=ref(false),voices=ref([]),voiceURI=ref(''),rulesVersion=ref(3);
 const voiceMemory=collectionVoicePreference(storage,props.collection,page.props.auth?.user?.id??'guest',props.shared);
-let rememberedVoice=voiceMemory.read();
+let stopObservingVoices;
 const synthesis=typeof window!=='undefined'?window.speechSynthesis:null;
 const speech=createLocalSpeech(synthesis,typeof window!=='undefined'?window.SpeechSynthesisUtterance:null);
 const speechAvailable=computed(()=>speech.supported&&voices.value.length>0);
 function refreshVoices(){
  voices.value=localVoices(synthesis);
- if(!voiceURI.value&&voices.value.some(voice=>voice.voiceURI===rememberedVoice))voiceURI.value=rememberedVoice;
- if(!voices.value.some(voice=>voice.voiceURI===voiceURI.value)){
-  voiceURI.value='';speech.cancel();
- }
+ const rememberedVoice=voiceMemory.read();
+ const selected=resolveLocalVoice(voices.value,rememberedVoice);
+ if(!selected){voiceURI.value='';speechEnabled.value=false;speech.cancel();}
+ else voiceURI.value=rememberedVoice;
 }
 function speak(text){if(speechEnabled.value&&voiceURI.value)speech.speak(text,voiceURI.value);}
 function speakQuestion(){if(started.value&&!finished.value&&current.value)speak(props.mode==='flashcards'&&flipped.value?current.value.expected:current.value.prompt);}
-onMounted(()=>{refreshVoices();synthesis?.addEventListener('voiceschanged',refreshVoices);});
-onBeforeUnmount(()=>{clearTimeout(swipeTimer);synthesis?.removeEventListener('voiceschanged',refreshVoices);speech.dispose();});
+onMounted(()=>{stopObservingVoices=observeVoiceChanges(synthesis,window,document,refreshVoices);});
+onBeforeUnmount(()=>{clearTimeout(swipeTimer);stopObservingVoices?.();speech.dispose();});
 
 watch([speechEnabled,voiceURI],()=>{speech.cancel();speakQuestion();});
 watch([index,started,finished,questions,flipped],()=>{speech.cancel();speakQuestion();});

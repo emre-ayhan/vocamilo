@@ -20,3 +20,25 @@ test('module controls have no selector, default off, and read the visible flashc
  assert.match(source,/role="switch" :aria-checked="speechEnabled" :disabled="!speechAvailable\|\|!voiceURI"/);
  assert.doesNotMatch(source,/voiceMemory.write/);
 });
+
+test('composite identity selects duplicate URI voices by name and language regardless of ordering',async()=>{
+ const {voiceIdentity,resolveLocalVoice,selectableLocalVoices}=await import('./speech.js');
+ const a={voiceURI:'same',name:'English 1',lang:'en-US',localService:true},b={...a,name:'English 2'};
+ assert.equal(resolveLocalVoice([a,b],'same'),null);
+ assert.equal(resolveLocalVoice([b,a],voiceIdentity(b)),b);
+ assert.equal(resolveLocalVoice([a,b],voiceIdentity(b)),b);
+ assert.equal(resolveLocalVoice([a,{...a}],voiceIdentity(a)),null);
+ assert.equal(selectableLocalVoices([a,{...a},b]).length,1);
+ assert.equal(resolveLocalVoice([{...b,localService:false}],voiceIdentity(b)),null);
+ const {synthesis,events,setVoices}=setup();setVoices([b,a]);const speech=createLocalSpeech(synthesis,Utterance);
+ assert.equal(speech.speak('test',voiceIdentity(b)),true);assert.equal(events.at(-1).voice,b);
+ setVoices([a]);assert.equal(speech.speak('test',voiceIdentity(b)),false);
+});
+test('delayed voices, resume and storage events refresh inventory and disposer removes listeners',async()=>{
+ const {observeVoiceChanges}=await import('./speech.js');
+ const synth=new EventTarget(),win=new EventTarget(),doc=new EventTarget();doc.visibilityState='visible';let count=0;
+ const stop=observeVoiceChanges(synth,win,doc,()=>count++);assert.equal(count,1);
+ synth.dispatchEvent(new Event('voiceschanged'));for(const key of ['focus','pageshow','storage'])win.dispatchEvent(new Event(key));doc.dispatchEvent(new Event('visibilitychange'));assert.equal(count,6);
+ doc.visibilityState='hidden';doc.dispatchEvent(new Event('visibilitychange'));assert.equal(count,6);
+ stop();synth.dispatchEvent(new Event('voiceschanged'));win.dispatchEvent(new Event('focus'));assert.equal(count,6);
+});

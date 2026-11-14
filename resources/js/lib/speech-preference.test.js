@@ -21,7 +21,7 @@ test('saved voice restores only from available local voices and never turns spee
  const source=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
  assert.match(source,/speechEnabled=ref\(false\)/);
  assert.match(source,/voices.value=localVoices\(synthesis\)/);
- assert.match(source,/voices.value.some\(voice=>voice.voiceURI===rememberedVoice\)/);
+ assert.match(source,/resolveLocalVoice\(voices.value,rememberedVoice\)/);
  assert.doesNotMatch(source,/speechEnabled.value=true/);
 });
 
@@ -49,7 +49,7 @@ test('collection forms keep voice outside server form data and save only through
  assert.match(show,/@submit.prevent="saveVoice"/);
  assert.doesNotMatch(picker,/localStorage|voiceMemory|fetch\(/);
  assert.match(picker,/localVoices\(synthesis\)/);
- assert.match(picker,/addEventListener\('voiceschanged',refresh\)/);
+ assert.match(picker,/observeVoiceChanges\(synthesis,window,document,refresh\)/);
 });
 
 test('guest voice never transfers into signed-in owner or member scopes',()=>{
@@ -83,3 +83,5 @@ test('public UI allows only personal voice changes and never persists guest note
  assert.match(session,/<FlashcardNote v-if="!shared"/);
  assert.match(session,/if\(props.shared\|\|busy.value\|\|saveState.value==='saved'\)return/);
 });
+
+test('session refresh rereads saved identity and invalid voices disable rather than fallback',()=>{const source=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');assert.match(source,/function refreshVoices\(\)\{[\s\S]*const rememberedVoice=voiceMemory.read\(\)/);assert.match(source,/if\(!selected\)\{voiceURI.value='';speechEnabled.value=false;speech.cancel\(\)/);});
