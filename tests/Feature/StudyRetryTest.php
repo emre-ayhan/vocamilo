@@ -134,6 +134,9 @@ class StudyRetryTest extends TestCase
         [, $c] = $this->fixture(1);
         foreach (['test', 'flashcards'] as $mode) {
             $s = $this->start($c, $mode);
+            if ($mode === 'test') {
+                StudySession::findOrFail($s['id'])->update(['rules_version' => 1]);
+            }
             $q = $s['questions'][0];
             $answer = $mode === 'test' ? ['word_id' => $q['id'], 'answer' => $q['expected']] : ['word_id' => $q['id'], 'known' => true];
             $this->finish($c, $s, [$answer, $answer])->assertUnprocessable();

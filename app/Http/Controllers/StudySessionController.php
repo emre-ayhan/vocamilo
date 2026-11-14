@@ -55,8 +55,8 @@ class StudySessionController extends Controller
             }
             $ordered = $ordered->filter(fn ($w) => ! ($known[$w->id] ?? false))->concat($ordered->filter(fn ($w) => $known[$w->id] ?? false))->values();
         }
-        $directions = $d['mode'] === 'study' ? ($settings['directions'] ?? [$settings['direction']]) : [$settings['direction']];
-        $types = $d['mode'] === 'study' ? ($settings['types'] ?? [$settings['type']]) : [$settings['type']];
+        $directions = in_array($d['mode'], ['study', 'test'], true) ? ($settings['directions'] ?? [$settings['direction']]) : [$settings['direction']];
+        $types = in_array($d['mode'], ['study', 'test'], true) ? ($settings['types'] ?? [$settings['type']]) : [$settings['type']];
         $combinations = [];
         foreach ($directions as $direction) {
             foreach ($types as $type) {
@@ -76,7 +76,7 @@ class StudySessionController extends Controller
 
             return ['id' => $w->id, 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $variant['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written', 'options' => $others->push($w->$answerKey)->shuffle()->values()->all()];
         })->values()->all();
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 3 : 1]);
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => in_array($d['mode'], ['study', 'test'], true) ? 3 : 1]);
         // Notes may be displayed privately, but are not copied into historical data.
         $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
@@ -93,7 +93,7 @@ class StudySessionController extends Controller
             if ($s->completed_at) {
                 return response()->json($this->completed($s));
             }
-            if ($s->mode === 'study' && $s->rules_version >= 2) {
+            if (($s->mode === 'study' && $s->rules_version >= 2) || ($s->mode === 'test' && $s->rules_version >= 3)) {
                 return $this->completeStudy($r, $s);
             }
             $d = $r->validate(['answers' => 'required|array|size:'.$s->total_count, 'answers.*' => 'required|array:word_id,answer,known,self_assessed', 'answers.*.word_id' => 'required|integer|distinct', 'answers.*.answer' => 'nullable|string|max:5000', 'answers.*.known' => 'sometimes|boolean', 'answers.*.self_assessed' => 'sometimes|boolean']);
@@ -158,7 +158,7 @@ class StudySessionController extends Controller
             }
             $attempts[$qi] = $number;
             $self = (bool) ($a['self_assessed'] ?? false);
-            if ($self && ! ($q['type'] === 'written' && $q['answerKey'] === 'definition')) {
+            if ($self && ! ($s->mode === 'study' && $q['type'] === 'written' && $q['answerKey'] === 'definition')) {
                 throw ValidationException::withMessages(['answers' => __('Self assessment is allowed only for written definitions in Study.')]);
             }
             if (! filled(trim($a['answer']))) {

@@ -380,5 +380,8 @@ export default {
   "Choose a local voice to start reading aloud.": "Escolha uma voz local para começar a leitura em voz alta.",
   "Unseen and unlearned words come first. A missed word returns up to twice more, stopping as soon as you answer correctly.": "As palavras ainda não estudadas ou erradas na primeira tentativa têm prioridade. Uma palavra errada volta até mais duas vezes, deixando de aparecer assim que responder corretamente.",
   "Round complete. Repetitions do not change your first-attempt score.": "Ronda concluída. As repetições não alteram o resultado da primeira tentativa.",
-  "Read question aloud": "Ler a pergunta em voz alta"
+  "Read question aloud": "Ler a pergunta em voz alta",
+  "Question": "Pergunta",
+  "Reveal the answer, then swipe left for Still learning or right for I know this.": "Revele a resposta e deslize para a esquerda para Ainda estou a aprender ou para a direita para Já sei.",
+  "Test feedback appears at the end. A repeated question can indicate an earlier mistake; this is a practice test, not a secure exam.": "O resultado do teste aparece no final. Uma pergunta repetida pode indicar um erro anterior; este é um teste de prática, não um exame seguro."
 };

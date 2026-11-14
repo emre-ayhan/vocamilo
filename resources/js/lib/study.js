@@ -23,5 +23,5 @@ export function createQuestions(words,settings={},random=Math.random){
 }
 export function score(results){const correct=results.filter(r=>r.correct).length;return {correct,total:results.length,percent:results.length?Math.round(correct/results.length*100):0};}
 
-// Only Study choices check immediately; written and Test keep explicit submission.
-export function shouldAutoCheck(mode, type) { return mode === 'study' && type === 'choice'; }
+// Choice answers are checked internally immediately; Test keeps feedback hidden.
+export function shouldAutoCheck(mode, type) { return (mode === 'study' || mode === 'test') && type === 'choice'; }

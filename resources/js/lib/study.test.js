@@ -7,10 +7,10 @@ test('ordered questions respect count and direction',()=>{const q=createQuestion
 test('a single distinct answer falls back to written',()=>{const q=createQuestions(words.slice(1),{direction:'definition',type:'choice'});assert.equal(q[0].type,'written');});
 test('questions and score work for empty sets',()=>{assert.deepEqual(createQuestions([]),[]);assert.deepEqual(score([]),{correct:0,total:0,percent:0});assert.equal(score([{correct:true},{correct:false}]).percent,50);});
 
-test('only Study multiple-choice selection auto-checks',()=>{
+test('Study and Test choices check internally; written answers require submission',()=>{
     assert.equal(shouldAutoCheck('study','choice'),true);
     assert.equal(shouldAutoCheck('study','written'),false);
-    assert.equal(shouldAutoCheck('test','choice'),false);
+    assert.equal(shouldAutoCheck('test','choice'),true);
     assert.equal(shouldAutoCheck('test','written'),false);
     assert.equal(shouldAutoCheck('flashcards','choice'),false);
 });
@@ -20,10 +20,10 @@ test('Study choices use accessible native radios with circle feedback instead of
     const source=await readFile(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
     assert.match(source,/type="radio" name="answer-choice" :checked="answer===option"/);
     assert.match(source,/@change="selectOption\(option\)" :disabled="checked" required/);
-    assert.match(source,/<svg v-if="mode==='study'" class="answer-choice-icon"/);
+    assert.match(source,/<svg v-if="mode!=='flashcards'" class="answer-choice-icon"/);
     assert.match(source,/<span v-else class="option-letter">/);
-    assert.match(source,/v-if="checked&&answer===option&&correct"/);
-    assert.match(source,/v-else-if="checked&&answer===option&&!correct"/);
+    assert.match(source,/v-if="mode==='study'&&checked&&answer===option&&correct"/);
+    assert.match(source,/v-else-if="mode==='study'&&checked&&answer===option&&!correct"/);
     assert.match(source,/input:focus-visible\+\.answer-choice-icon/);
     assert.match(source,/class="answer-choice-icon"[^>]*aria-hidden="true"/);
     assert.match(source,/role="status"><strong>{{correct\?t/);
@@ -47,6 +47,6 @@ test('Study switches retain at least one choice; question replay is a keyboard-n
  assert.match(source,/directions.length===1&&directions.includes/);
  assert.match(source,/answerTypes.length===1&&answerTypes.includes/);
  assert.doesNotMatch(source,/Read question again/);
- assert.match(source,/v-if="mode==='study'&&speechEnabled&&voiceURI" type="button" class="spoken-question"/);
+ assert.match(source,/v-if="mode!=='flashcards'&&speechEnabled&&voiceURI" type="button" class="spoken-question"/);
  assert.match(source,/@click="speakQuestion">{{current.prompt}}/);
 });

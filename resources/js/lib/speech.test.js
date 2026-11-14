@@ -13,7 +13,7 @@ test('Study UI defaults off and keeps speech controls above active questions',as
  const {readFile}=await import('node:fs/promises');
  const source=await readFile(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
  assert.match(source,/speechEnabled=ref\(false\)/);
- assert.match(source,/v-if="mode==='study'&&words.length"/);
+ assert.match(source,/v-if="mode!=='flashcards'&&words.length"/);
  assert.ok(source.indexOf('id="speech-title"')<source.indexOf('class="panel question-panel"'));
  assert.match(source,/role="switch" :aria-checked="speechEnabled" :disabled="!speechAvailable"/);
  assert.match(source,/v-if="speechEnabled&&speechAvailable"/);

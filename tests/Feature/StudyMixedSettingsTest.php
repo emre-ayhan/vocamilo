@@ -58,7 +58,7 @@ class StudyMixedSettingsTest extends TestCase
             $this->assertSame('written', $q['type']);
             $this->assertSame('definition', $q['answerKey']);
         }
-        foreach (['test', 'flashcards'] as $mode) {
+        foreach (['flashcards'] as $mode) {
             $s = $this->start($c, $settings, $mode)->assertCreated()->json();
             foreach ($s['questions'] as $q) {
                 $this->assertSame('choice', $q['type']);
@@ -93,6 +93,6 @@ class StudyMixedSettingsTest extends TestCase
         $new = $u->words()->create(['term' => 'new', 'definition' => 'new definition']);
         $c->words()->attach($new);
         $s = $this->start($c, ['types' => ['choice', 'written'], 'directions' => ['term', 'definition'], 'count' => 1])->assertCreated()->json();
-        $this->assertSame($new->id,$s['questions'][0]['id']);
+        $this->assertSame($new->id, $s['questions'][0]['id']);
     }
 }
