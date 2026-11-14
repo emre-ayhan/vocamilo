@@ -512,5 +512,13 @@ export default {
 "Search accounts by name or email":"Pesquisar contas por nome ou email",
 "Saved voice unavailable or ambiguous. Choose a local voice again.":"A voz guardada está indisponível ou é ambígua. Escolha novamente uma voz local.",
 "Only voices exposed by this browser can be selected. Device voice settings may not be exposed or honored by the browser.":"Só podem ser selecionadas vozes disponibilizadas por este navegador. As definições de voz do dispositivo podem não estar disponíveis ou não ser respeitadas pelo navegador.",
-"This browser reports indistinguishable local voices. Reading aloud is unavailable until it provides a unique voice.":"Este navegador apresenta vozes locais indistinguíveis. A leitura em voz alta não está disponível até existir uma voz identificável de forma única."
+"This browser reports indistinguishable local voices. Reading aloud is unavailable until it provides a unique voice.":"Este navegador apresenta vozes locais indistinguíveis. A leitura em voz alta não está disponível até existir uma voz identificável de forma única.",
+"SHARED MEMBER PROGRESS":"PROGRESSO PARTILHADO DO MEMBRO",
+"Progress for {name}":"Progresso de {name}",
+"Close progress":"Fechar progresso",
+"Newest members first":"Membros mais recentes primeiro",
+"Progress unavailable until this member accepts the current sharing consent.":"O progresso não está disponível até este membro aceitar o consentimento de partilha atual.",
+"View progress":"Ver progresso",
+"Progress unavailable. Current sharing consent and an active account are required.":"Progresso indisponível. São necessários o consentimento de partilha atual e uma conta ativa.",
+"Success is the member’s latest correct or known first attempts divided by all current collection words, including unpracticed words. Automatic retries do not change the first result. Empty collections show no percentage. Missing historical word records cannot be reconstructed.":"O sucesso corresponde às primeiras tentativas corretas ou conhecidas mais recentes do membro, divididas por todas as palavras atuais da coleção, incluindo as não praticadas. As repetições automáticas não alteram o primeiro resultado. As coleções vazias não apresentam percentagem. Não é possível reconstruir registos históricos de palavras em falta."
 };

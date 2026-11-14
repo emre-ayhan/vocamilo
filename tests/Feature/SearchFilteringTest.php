@@ -57,9 +57,9 @@ class SearchFilteringTest extends TestCase
             }
         }
         User::factory()->create(['name' => 'ALICE nonmember']);
-        $url = '/collections/'.$c->id.'/progress';
-        $this->get($url.'?'.http_build_query(['q' => '  LiCe  ']))->assertInertia(fn (Assert $p) => $p->where('filters.q', 'LiCe')->has('members.data', 1)->where('members.data.0.id', $visible->id)->missing('members.data.0.email'));
-        $this->get($url.'?q=hidden-email')->assertInertia(fn (Assert $p) => $p->has('members.data', 1)->missing('members.data.0.email'));
+        $url = '/collections/'.$c->id.'/sharing/members';
+        $this->get($url.'?'.http_build_query(['q' => '  LiCe  ']))->assertInertia(fn (Assert $p) => $p->where('filters.q', 'LiCe')->has('participants.data', 5)->missing('participants.data.0.email'));
+        $this->get($url.'?q=hidden-email')->assertInertia(fn (Assert $p) => $p->has('participants.data', 1)->missing('participants.data.0.email'));
     }
 
     public function test_literal_wildcards_escape_character_and_backslash_do_not_expand_member_search(): void
@@ -69,7 +69,7 @@ class SearchFilteringTest extends TestCase
             $c->members()->attach(User::factory()->create(['name' => $name]), ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         }
         foreach (['%', '_', '!', '\\'] as $term) {
-            $this->get('/collections/'.$c->id.'/progress?'.http_build_query(['q' => $term]))->assertInertia(fn (Assert $p) => $p->has('members.data', 1));
+            $this->get('/collections/'.$c->id.'/sharing/members?'.http_build_query(['q' => $term]))->assertInertia(fn (Assert $p) => $p->has('participants.data', 1));
         }
         $this->assertSame('%!%!_!!\\%', LiteralSearch::pattern('%_!\\'));
     }
@@ -100,7 +100,7 @@ class SearchFilteringTest extends TestCase
         [, $c] = $this->progressFixture();
         $user = User::factory()->create(['name' => 'Émre José']);
         $c->members()->attach($user, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
-        $this->get('/collections/'.$c->id.'/progress?'.http_build_query(['q' => 'Émre']))->assertInertia(fn (Assert $p) => $p->has('members.data', 1));
+        $this->get('/collections/'.$c->id.'/sharing/members?'.http_build_query(['q' => 'Émre']))->assertInertia(fn (Assert $p) => $p->has('participants.data', 1));
         // Stock SQLite LOWER is ASCII-only; do not assert É=é without a Unicode extension.
     }
 
@@ -113,10 +113,10 @@ class SearchFilteringTest extends TestCase
         $c->members()->attach(User::factory()->create(['name' => 'Unrelated']), ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $other = $owner->collections()->create(['title' => 'Other']);
         $other->members()->attach(User::factory()->create(['name' => 'MATCH elsewhere']), ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
-        $url = '/collections/'.$c->id.'/progress';
-        $this->get($url.'?q=match')->assertInertia(fn (Assert $p) => $p->has('members.data', 15)->where('members.total', 17)->where('members.next_page_url', fn ($url) => str_contains($url, 'q=match') && str_contains($url, 'page=2')));
-        $this->get($url.'?q=match&page=2')->assertInertia(fn (Assert $p) => $p->has('members.data', 2)->where('members.current_page', 2)->where('members.total', 17)->where('filters.q', 'match')->where('members.prev_page_url', fn ($url) => str_contains($url, 'q=match')));
+        $url = '/collections/'.$c->id.'/sharing/members';
+        $this->get($url.'?q=match')->assertInertia(fn (Assert $p) => $p->has('participants.data', 15)->where('participants.total', 17)->where('participants.next_page_url', fn ($url) => str_contains($url, 'q=match') && str_contains($url, 'page=2')));
+        $this->get($url.'?q=match&participants_page=2')->assertInertia(fn (Assert $p) => $p->has('participants.data', 2)->where('participants.current_page', 2)->where('participants.total', 17)->where('filters.q', 'match')->where('participants.prev_page_url', fn ($url) => str_contains($url, 'q=match')));
         $this->getJson($url.'?q[]=match')->assertUnprocessable();
-        $this->getJson($url.'?q=match&page=-1')->assertUnprocessable();
+        $this->getJson($url.'?q=match&participants_page=-1')->assertUnprocessable();
     }
 }

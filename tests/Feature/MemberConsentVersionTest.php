@@ -32,7 +32,7 @@ class MemberConsentVersionTest extends TestCase
     public function test_v1_members_are_hidden_even_when_email_matches_then_reconsent_enables_search(): void
     {
         [$owner,$member,$c] = $this->fixture();
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress?q=PRIVATE.UNI')->assertInertia(fn (Assert $p) => $p->has('members.data', 0)->where('members.total', 0));
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members?q=PRIVATE.UNI')->assertInertia(fn (Assert $p) => $p->has('participants.data', 0)->where('participants.total', 0));
         $this->actingAs($member)->get('/collections/'.$c->id)->assertRedirect('/collections/'.$c->id.'/consent');
         $this->get('/collections/'.$c->id.'/consent')->assertInertia(fn (Assert $p) => $p->where('consentVersion', 2));
         foreach ([['progress_consent' => true], ['progress_consent' => true, 'consent_version' => 1]] as $stale) {
@@ -40,7 +40,7 @@ class MemberConsentVersionTest extends TestCase
         }
         $this->assertSame(1, (int) $c->members()->first()->pivot->progress_consent_version);
         $this->post('/collections/'.$c->id.'/consent', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect('/collections/'.$c->id);
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress?q=PRIVATE.UNI')->assertInertia(fn (Assert $p) => $p->has('members.data', 1)->where('members.data.0.id', $member->id)->missing('members.data.0.email'))->assertDontSee($member->email);
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members?q=PRIVATE.UNI')->assertInertia(fn (Assert $p) => $p->has('participants.data', 1)->where('participants.data.0.id', $member->id)->missing('participants.data.0.email'))->assertDontSee($member->email);
     }
 
     public function test_email_or_search_cannot_escape_membership_consent_or_suspension_filters(): void
@@ -55,8 +55,8 @@ class MemberConsentVersionTest extends TestCase
         $blocked = User::factory()->create(['email' => 'blocked.unique@example.com']);
         $c->members()->attach($blocked, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $c->blockedUsers()->attach($blocked);
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress?q=unique')->assertInertia(fn (Assert $p) => $p->has('members.data', 1)->where('members.total', 1));
-        $this->get('/collections/'.$c->id.'/progress?q=%25')->assertInertia(fn (Assert $p) => $p->has('members.data', 0));
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members?q=unique')->assertInertia(fn (Assert $p) => $p->has('participants.data', 1)->where('participants.total', 1));
+        $this->get('/collections/'.$c->id.'/sharing/members?q=%25')->assertInertia(fn (Assert $p) => $p->has('participants.data', 0));
     }
 
     public function test_old_cached_join_form_and_pending_consent_never_upgrade_silently(): void

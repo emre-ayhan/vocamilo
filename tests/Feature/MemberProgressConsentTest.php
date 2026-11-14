@@ -92,12 +92,12 @@ class MemberProgressConsentTest extends TestCase
         $blocked = $this->user();
         $c->members()->attach($blocked, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $c->blockedUsers()->attach($blocked);
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress')->assertOk()->assertInertia(fn (Assert $p) => $p->has('members.data', 1)->where('members.data.0.id', $member->id)->where('members.data.0.summary.total_sessions', 1)->missing('members.data.0.email'))->assertDontSee('OWNER SECRET')->assertDontSee('MEMBER PRIVATE NOTE')->assertDontSee('PRIVATE QUESTION')->assertDontSee('PRIVATE EXPECTED')->assertDontSee('PRIVATE ANSWER');
-        $this->actingAs($member)->get('/collections/'.$c->id.'/progress')->assertNotFound();
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members?member='.$member->id)->assertOk()->assertInertia(fn (Assert $p) => $p->has('participants.data', 5)->where('selectedMember.id', $member->id)->where('selectedMember.summary.total_sessions', 1)->missing('participants.data.0.email'))->assertDontSee('OWNER SECRET')->assertDontSee('MEMBER PRIVATE NOTE')->assertDontSee('PRIVATE QUESTION')->assertDontSee('PRIVATE EXPECTED')->assertDontSee('PRIVATE ANSWER');
+        $this->actingAs($member)->get('/collections/'.$c->id.'/sharing/members')->assertNotFound();
         $this->get('/collections/'.$c->id.'/consent')->assertOk();
         $this->delete('/collections/'.$c->id.'/membership')->assertRedirect('/collections');
         $this->assertNotNull($session->fresh());
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress')->assertInertia(fn (Assert $p) => $p->has('members.data', 0));
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members?member='.$member->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
     }
 
     public function test_declining_preserves_notes_and_history_but_revokes_membership(): void
@@ -134,8 +134,8 @@ class MemberProgressConsentTest extends TestCase
         for ($i = 0; $i < 17; $i++) {
             $c->members()->attach($this->user(), ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         }
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress')->assertInertia(fn (Assert $p) => $p->has('members.data', 15)->where('members.total', 17));
-        $this->get('/collections/'.$c->id.'/progress?page=2')->assertInertia(fn (Assert $p) => $p->has('members.data', 2));
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members')->assertInertia(fn (Assert $p) => $p->has('participants.data', 15)->where('participants.total', 17));
+        $this->get('/collections/'.$c->id.'/sharing/members?participants_page=2')->assertInertia(fn (Assert $p) => $p->has('participants.data', 2));
     }
 
     public function test_pending_join_waits_for_global_disclosure_without_losing_member_consent(): void
@@ -152,14 +152,14 @@ class MemberProgressConsentTest extends TestCase
     {
         [$owner,$member,$c] = $this->fixture();
         $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
-        $this->actingAs($owner)->get('/collections/'.$c->id.'/progress')->assertInertia(fn (Assert $p) => $p->has('members.data', 1));
+        $this->actingAs($owner)->get('/collections/'.$c->id.'/sharing/members')->assertInertia(fn (Assert $p) => $p->has('participants.data', 1));
         $this->post('/collections/'.$c->id.'/blocks/'.$member->id)->assertRedirect();
-        $this->get('/collections/'.$c->id.'/progress')->assertInertia(fn (Assert $p) => $p->has('members.data', 0));
+        $this->get('/collections/'.$c->id.'/sharing/members')->assertInertia(fn (Assert $p) => $p->has('participants.data', 0));
         $c->blockedUsers()->detach($member);
         $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
         $this->delete('/collections/'.$c->id.'/sharing')->assertRedirect();
-        $this->get('/collections/'.$c->id.'/progress')->assertInertia(fn (Assert $p) => $p->has('members.data', 0));
-        $this->getJson('/collections/'.$c->id.'/progress?page=0')->assertUnprocessable();
+        $this->get('/collections/'.$c->id.'/sharing/members')->assertInertia(fn (Assert $p) => $p->has('participants.data', 0));
+        $this->getJson('/collections/'.$c->id.'/sharing/members?participants_page=0')->assertUnprocessable();
     }
 
     public function test_suspended_login_never_attaches_pending_membership(): void

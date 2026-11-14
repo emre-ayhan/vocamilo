@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -64,5 +65,73 @@ class SharingMembersPageTest extends TestCase
         foreach ([$member, $blocked, User::factory()->create()] as $viewer) {
             $this->actingAs($viewer)->get($url)->assertNotFound();
         }
+    }
+
+    public function test_newest_join_order_and_only_selected_eligible_member_gets_summary(): void
+    {
+        $owner = User::factory()->create();
+        $c = $owner->collections()->create(['title' => 'Main']);
+        $c->forceFill(['share_uuid' => (string) Str::uuid()])->save();
+        $old = User::factory()->create(['name' => 'Z old']);
+        $new = User::factory()->create(['name' => 'A new']);
+        $tie = User::factory()->create(['name' => 'B tie']);
+        foreach ([$old, $new, $tie] as $u) {
+            $c->members()->attach($u, ['progress_consented_at' => now(), 'progress_consent_version' => 2, 'created_at' => $u->is($old) ? now()->subDay() : now()]);
+        }
+        $url = '/collections/'.$c->id.'/sharing/members';
+        $this->actingAs($owner)->get($url)->assertInertia(fn (Assert $p) => $p->where('participants.data.0.id', $tie->id)->where('participants.data.1.id', $new->id)->where('participants.data.2.id', $old->id)->where('participants.data.0.can_view_progress', true)->missing('participants.data.0.summary')->where('selectedMember', null));
+        // Selection remains valid even when its row is filtered off the visible page.
+        $this->get($url.'?q=A+new&member='.$old->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember.id', $old->id)->where('selectedMember.summary.total_sessions', 0)->missing('selectedMember.email')->missing('selectedMember.note'));
+        $this->getJson($url.'?member[]=1')->assertUnprocessable();
+        $this->getJson($url.'?member=0')->assertUnprocessable();
+        $this->get($url.'?member=999999')->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
+    }
+
+    public function test_selected_progress_and_email_search_require_every_consent_and_access_condition(): void
+    {
+        $owner = User::factory()->create();
+        $c = $owner->collections()->create(['title' => 'Main']);
+        $c->forceFill(['share_uuid' => (string) Str::uuid()])->save();
+        $url = '/collections/'.$c->id.'/sharing/members';
+        $this->actingAs($owner);
+        foreach (['v1', 'missing_date', 'global', 'global_date', 'suspended', 'blocked', 'removed', 'valid'] as $kind) {
+            $u = User::factory()->create(['name' => 'Learner '.$kind, 'email' => $kind.'-secret@example.com']);
+            $c->members()->attach($u, ['progress_consented_at' => $kind === 'missing_date' ? null : now(), 'progress_consent_version' => $kind === 'v1' ? 1 : 2]);
+            if ($kind === 'global') {
+                $u->forceFill(['admin_disclosure_version' => null])->save();
+            }
+            if ($kind === 'global_date') {
+                $u->forceFill(['admin_disclosure_accepted_at' => null])->save();
+            }
+            if ($kind === 'suspended') {
+                $u->forceFill(['suspended_at' => now()])->save();
+            }
+            if ($kind === 'blocked') {
+                $c->blockedUsers()->attach($u);
+            }
+            if ($kind === 'removed') {
+                $c->members()->detach($u);
+            }
+            $response = $this->get($url.'?q='.$kind.'-secret&member='.$u->id);
+            $response->assertInertia(fn (Assert $p) => $p->has('participants.data', $kind === 'valid' ? 1 : 0)->where('participants.total', $kind === 'valid' ? 1 : 0));
+            if ($kind !== 'valid') {
+                $response->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
+            } else {
+                $response->assertInertia(fn (Assert $p) => $p->where('selectedMember.id', $u->id)->missing('selectedMember.email'));
+            }
+        }
+        $c->forceFill(['share_uuid' => null])->save();
+        $this->get($url.'?q=valid-secret&member='.$u->id)->assertInertia(fn (Assert $p) => $p->has('participants.data', 0)->where('selectedMember', null));
+    }
+
+    public function test_old_progress_url_redirects_only_validated_search_and_page(): void
+    {
+        $owner = User::factory()->create();
+        $c = $owner->collections()->create(['title' => 'Main']);
+        $url = '/collections/'.$c->id;
+        $this->actingAs($owner)->get($url.'/progress?q=+a%26b+&page=2&unexpected=secret')->assertRedirect($url.'/sharing/members?q=a%26b&participants_page=2');
+        $this->getJson($url.'/progress?page=-1')->assertUnprocessable();
+        $this->getJson($url.'/progress?q[]=bad')->assertUnprocessable();
+        $this->actingAs(User::factory()->create())->get($url.'/progress')->assertNotFound();
     }
 }

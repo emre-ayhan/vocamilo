@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collection;
-use App\Models\StudySession;
-use App\Support\LiteralSearch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -73,14 +71,16 @@ class CollectionConsentController extends Controller
 
     public function progress(Request $r, int $collection)
     {
-        $c = $r->user()->collections()->findOrFail($collection);
+        $r->user()->collections()->findOrFail($collection);
         $filters = $r->validate(['q' => 'nullable|string|max:100', 'page' => 'nullable|integer|min:1']);
-        $search = trim($filters['q'] ?? '');
-        $members = $c->members()->when(! $c->share_uuid, fn ($q) => $q->whereRaw('1 = 0'))->when($search !== '', fn ($q) => $q->where(fn ($q) => $q->whereRaw("LOWER(users.name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)])->orWhereRaw("LOWER(users.email) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)])))->wherePivotNotNull('progress_consented_at')->wherePivot('progress_consent_version', Collection::PROGRESS_CONSENT_VERSION)
-            ->where('users.admin_disclosure_version', 1)->whereNotNull('users.admin_disclosure_accepted_at')->whereNull('users.suspended_at')
-            ->whereNotIn('users.id', $c->blockedUsers()->pluck('users.id'))
-            ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'])->withQueryString();
+        $query = [];
+        if (isset($filters['q'])) {
+            $query['q'] = trim($filters['q']);
+        }
+        if (isset($filters['page'])) {
+            $query['participants_page'] = $filters['page'];
+        }
 
-        return Inertia::render('Collections/Progress', ['collection' => $c->only('id', 'title'), 'filters' => ['q' => $search], 'members' => $members->through(fn ($member) => ['id' => $member->id, 'name' => $member->name, 'consented_at' => $member->pivot->progress_consented_at, 'summary' => StudySession::summaryFor($c, $member->id)])]);
+        return redirect('/collections/'.$collection.'/sharing/members'.($query ? '?'.http_build_query($query) : ''));
     }
 }
