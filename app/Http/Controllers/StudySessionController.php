@@ -24,9 +24,13 @@ class StudySessionController extends Controller
         $c = Collection::accessibleTo($r->user()->id, $collection);
         $d = $r->validate([
             'mode' => 'required|in:flashcards,study,test',
-            'settings' => 'required|array:type,direction,order,count',
+            'settings' => 'required|array:type,direction,types,directions,order,count',
             'settings.type' => 'required|in:choice,written',
             'settings.direction' => 'required|in:term,definition',
+            'settings.directions' => 'sometimes|array|min:1|max:2',
+            'settings.directions.*' => 'required|distinct|in:term,definition',
+            'settings.types' => 'sometimes|array|min:1|max:2',
+            'settings.types.*' => 'required|distinct|in:choice,written',
             'settings.order' => 'required|in:ordered,random',
             'settings.count' => 'required|integer|min:1|max:2000',
             'word_ids' => 'sometimes|array|min:1|max:2000',
@@ -40,8 +44,6 @@ class StudySessionController extends Controller
         }
         abort_if($words->isEmpty(), 422, 'Add words before starting a session.');
         $settings = $d['settings'];
-        $answerKey = $settings['direction'] === 'definition' ? 'definition' : 'term';
-        $promptKey = $answerKey === 'term' ? 'definition' : 'term';
         $ordered = $settings['order'] === 'random' ? $words->shuffle() : $words;
         if ($d['mode'] === 'study') {
             $history = DB::table('study_answers as a')->join('study_sessions as s', 's.id', '=', 'a.study_session_id')->where('s.collection_id', $c->id)->where('s.user_id', $r->user()->id)->where('s.mode', 'study')->whereNotNull('s.completed_at')->where('a.attempt_no', 1)->whereNotNull('a.word_id')->orderByDesc('s.completed_at')->orderByDesc('a.id')->get(['a.word_id', 'a.correct']);
@@ -53,10 +55,26 @@ class StudySessionController extends Controller
             }
             $ordered = $ordered->filter(fn ($w) => ! ($known[$w->id] ?? false))->concat($ordered->filter(fn ($w) => $known[$w->id] ?? false))->values();
         }
-        $questions = $ordered->take($settings['count'])->map(function ($w) use ($words, $settings, $answerKey, $promptKey) {
+        $directions = $d['mode'] === 'study' ? ($settings['directions'] ?? [$settings['direction']]) : [$settings['direction']];
+        $types = $d['mode'] === 'study' ? ($settings['types'] ?? [$settings['type']]) : [$settings['type']];
+        $combinations = [];
+        foreach ($directions as $direction) {
+            foreach ($types as $type) {
+                $combinations[] = ['direction' => $direction, 'type' => $type];
+            }
+        }
+        $cycle = collect();
+        $questions = $ordered->take($settings['count'])->values()->map(function ($w, $index) use ($words, $combinations, &$cycle) {
+            // Shuffle each complete cycle: selected combinations differ in frequency by at most one.
+            if ($index % count($combinations) === 0) {
+                $cycle = collect($combinations)->shuffle();
+            }
+            $variant = $cycle[$index % count($combinations)];
+            $answerKey = $variant['direction'];
+            $promptKey = $answerKey === 'term' ? 'definition' : 'term';
             $others = $words->pluck($answerKey)->unique(fn ($v) => self::normalize($v))->filter(fn ($v) => self::normalize($v) !== self::normalize($w->$answerKey))->shuffle()->take(3);
 
-            return ['id' => $w->id, 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $settings['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written', 'options' => $others->push($w->$answerKey)->shuffle()->values()->all()];
+            return ['id' => $w->id, 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $variant['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written', 'options' => $others->push($w->$answerKey)->shuffle()->values()->all()];
         })->values()->all();
         $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 3 : 1]);
         // Notes may be displayed privately, but are not copied into historical data.

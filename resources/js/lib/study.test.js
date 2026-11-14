@@ -28,3 +28,25 @@ test('Study choices use accessible native radios with circle feedback instead of
     assert.match(source,/class="answer-choice-icon"[^>]*aria-hidden="true"/);
     assert.match(source,/role="status"><strong>{{correct\?t/);
 });
+test('mixed Study covers all selected direction and answer combinations without duplicate words',()=>{
+ const pool=Array.from({length:8},(_,i)=>({id:i,term:'term'+i,definition:'meaning'+i}));
+ const questions=createQuestions(pool,{directions:['term','definition'],types:['choice','written'],order:'ordered',count:8},()=>.3);
+ assert.equal(new Set(questions.map(q=>q.id)).size,8);
+ for(const subset of [questions.slice(0,4),questions.slice(4)])assert.equal(new Set(subset.map(q=>q.answerKey+':'+q.type)).size,4);
+ assert.deepEqual(questions.map(q=>q.id),pool.map(w=>w.id));
+});
+test('single selected settings and choice fallback still work',()=>{
+ const questions=createQuestions(words,{directions:['definition'],types:['written'],count:3});
+ assert.ok(questions.every(q=>q.answerKey==='definition'&&q.type==='written'));
+ assert.equal(createQuestions([words[0]],{directions:['term'],types:['choice']})[0].type,'written');
+});
+test('Study switches retain at least one choice; question replay is a keyboard-native button',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const source=await readFile(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+ assert.match(source,/if\(values.length>1\)values.splice/);
+ assert.match(source,/directions.length===1&&directions.includes/);
+ assert.match(source,/answerTypes.length===1&&answerTypes.includes/);
+ assert.doesNotMatch(source,/Read question again/);
+ assert.match(source,/v-if="mode==='study'&&speechEnabled&&voiceURI" type="button" class="spoken-question"/);
+ assert.match(source,/@click="speakQuestion">{{current.prompt}}/);
+});

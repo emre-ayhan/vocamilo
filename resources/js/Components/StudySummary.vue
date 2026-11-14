@@ -20,14 +20,20 @@ function outcome(session) { return session ? `${session.correct} / ${session.tot
                 <Link :href="`${base}/study?mode=${mode}`" class="button history-start" :aria-label="t('Start {mode} →', {mode:t(label)})">{{ t('Start →') }}</Link>
             </article>
         </div>
-        <h3 class="recent-heading">{{t("Recent sessions")}}</h3>
-        <p v-if="!summary.recent.length" class="muted">{{t("Complete a session to see your progress here.")}}</p>
-        <ol v-else class="history-list"><li v-for="session in summary.recent" :key="session.id"><div><strong>{{ t(labels[session.mode]) }}</strong><span v-if="session.practice_round" class="muted"> · {{t('Retry practice')}}</span><p>{{ outcome(session) }} · {{ session.total - session.correct }} {{ session.mode === 'flashcards' ? t('still learning') : t('incorrect') }}</p><small v-if="session.mode !== 'flashcards' && session.self_assessed">{{ session.self_assessed }} {{t('accepted by self-assessment')}}</small></div><time :datetime="session.completed_at">{{ date(session.completed_at) }}</time></li></ol>
+        <div class="completion-summary" :aria-label="t('completed sessions')">
+            <div class="completion-total"><strong>{{ summary.total_sessions || 0 }}</strong><span>{{t('completed sessions')}}</span></div>
+            <dl class="completion-counts">
+                <div v-for="(label, mode) in labels" :key="mode" class="completion-count" :class="`completion-count--${mode}`">
+                    <dt><span class="count-dot" aria-hidden="true"></span>{{t(label)}}</dt>
+                    <dd>{{ summary.modes[mode]?.count || 0 }}</dd>
+                </div>
+            </dl>
+        </div>
         <p class="muted small">{{t("Only completed sessions are shown. Results reflect the words and settings used at that time, not mastery of the entire current collection. Shared-link visitors cannot see this history.")}}</p>
     </section>
 </template>
 <style scoped>
-.study-history{margin-bottom:2rem}.history-mode{display:flex;flex-direction:column;padding:1rem;border:1px solid #dce5e4;border-radius:12px}.history-list{padding:0;list-style:none}.history-list li{display:flex;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid #dce5e4}.history-list time{font-size:.85rem;color:#52656d}@media(max-width:600px){.history-list li{flex-direction:column}.section-heading{flex-wrap:wrap}}
+.study-history{margin-bottom:2rem}.history-mode{display:flex;flex-direction:column;padding:1rem;border:1px solid #dce5e4;border-radius:12px}@media(max-width:600px){.section-heading{flex-wrap:wrap}}
 
 .history-mode--flashcards{background:#e9f7ef;border-color:#b6ddc8;color:#164b3c}
 .history-mode--study{background:#edf3ff;border-color:#c3d5f3;color:#204779}
@@ -39,6 +45,17 @@ function outcome(session) { return session ? `${session.correct} / ${session.tot
 .history-mode--study .history-start{background:linear-gradient(135deg,#24549b,#3474b6)}
 .history-mode--test .history-start{background:linear-gradient(135deg,#65408f,#8a4b97)}
 .history-start:hover{filter:brightness(.92);color:#fff}
-.recent-heading{margin-top:2.25rem;margin-bottom:1.1rem}
+.completion-summary{display:flex;align-items:center;gap:2rem;margin:1.75rem 0 1rem;padding:1.25rem 1.5rem;border:1px solid #dce5e4;border-radius:14px;background:linear-gradient(120deg,#f5f8f6,#f0f4f9)}
+.completion-total{display:flex;align-items:center;gap:.8rem;flex-shrink:0;color:#183544}
+.completion-total strong{font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+.completion-total span{max-width:9rem;font-size:.85rem;line-height:1.4;color:#52656d}
+.completion-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;flex:1;margin:0;padding-left:1.5rem;border-left:1px solid #d5dfdf}
+.completion-count{padding:.7rem .85rem;border-radius:10px;background:#fff;border:1px solid #e1e8e7}
+.completion-count dt{display:flex;align-items:center;gap:.45rem;font-size:.75rem;font-weight:650;color:#52656d}
+.completion-count dd{margin:.4rem 0 0;font-size:1.3rem;line-height:1.2;font-weight:750;font-variant-numeric:tabular-nums;color:#183544}
+.count-dot{width:7px;height:7px;flex-shrink:0;border-radius:50%;background:#217c60}
+.completion-count--study .count-dot{background:#3769ae}.completion-count--test .count-dot{background:#8056a0}
+@media(max-width:800px){.completion-summary{align-items:stretch;flex-direction:column;gap:1rem}.completion-counts{padding-left:0;border-left:0}}
+@media(max-width:600px){.completion-summary{padding:1.1rem}.completion-counts{grid-template-columns:1fr}.completion-count{display:flex;align-items:center;justify-content:space-between;gap:1rem}.completion-count dd{margin:0}}
 .study-history>.section-heading .pill{background:#e9f7ef;border-color:#b6ddc8;color:#24604a}
 </style>

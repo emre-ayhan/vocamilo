@@ -52,3 +52,11 @@ test('private mode starts live inside summary cards while guests retain all thre
     assert.match(summary, /history-start\{width:100%;margin-top:auto/);
     assert.match(summary, /study\?mode=\$\{mode\}/);
 });
+test('progress summary replaces recent rows with aggregate counts and preserves starts',()=>{
+ const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
+ assert.doesNotMatch(summary,/Recent sessions|v-for="session in summary.recent"/);
+ assert.match(summary,/completion-summary/);
+ assert.match(summary,/summary.total_sessions/);
+ assert.match(summary,/summary.modes\[mode\]\?\.count/);
+ assert.match(summary,/class="button history-start"/);
+});
