@@ -42,3 +42,13 @@ test('compact switch uses the actual navy theme and logo lime', () => {
     assert.match(source, /aria-pressed=true\]\{background:#d5f1ad;color:#15372f/);
     assert.match(source, /min-height:28px/);
 });
+
+test('private mode starts live inside summary cards while guests retain all three modes',()=>{
+    const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
+    const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
+    assert.match(show, /<StudySummary v-if="!shared" :summary="summary" :base="base"/);
+    assert.match(show, /<div v-if="shared" class="mode-grid">/);
+    assert.match(summary, /class="button history-start"/);
+    assert.match(summary, /history-start\{width:100%;margin-top:auto/);
+    assert.match(summary, /study\?mode=\$\{mode\}/);
+});

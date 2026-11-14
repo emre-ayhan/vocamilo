@@ -81,8 +81,8 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
             <div><h2>{{ t('Make this part of your learning.') }}</h2><p class="muted">{{ t('Join this collection to save your progress and add private notes. The original words stay connected to the owner.') }}</p></div>
             <button class="button" @click="join">{{ t(authenticated ? 'Join collection' : 'Sign in to join') }}</button>
         </section>
-        <StudySummary v-if="!shared" :summary="summary" />
-        <div class="mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><span>{{ item.icon }}</span><h3>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p><b>{{ t('Start →') }}</b></Link></div>
+        <StudySummary v-if="!shared" :summary="summary" :base="base" />
+        <div v-if="shared" class="mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><span>{{ item.icon }}</span><h3>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p><b>{{ t('Start →') }}</b></Link></div>
         <section v-if="owner" class="sharing panel">
             <div><span class="eyebrow">{{ t('KNOWLEDGE IS BETTER SHARED') }}</span><h3>{{ t(collection.share_uuid ? 'Your link is ready.' : 'Keep it private. Or pass it on.') }}</h3><p class="muted">{{ t(collection.share_uuid ? 'Anyone with this link can study without signing in. Your private notes stay private.' : 'Turn on link sharing whenever you want. Your personal notes are never shared.') }}</p></div>
             <div class="actions"><button v-if="!collection.share_uuid" class="button secondary" @click="router.post(`${base}/sharing`)">{{ t('Enable link sharing') }}</button><template v-else><button class="button" @click="copy">{{ t('Copy link') }}</button><button class="text-button danger" @click="disable">{{ t('Turn off') }}</button></template></div>

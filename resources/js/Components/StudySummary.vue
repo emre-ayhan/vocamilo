@@ -1,7 +1,8 @@
 <script setup>
+import { Link } from "@inertiajs/vue3";
 import { useI18n } from "../lib/i18n.js";
 const {t,locale}=useI18n();
-defineProps({ summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) } });
+defineProps({ base: { type: String, required: true }, summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) } });
 const labels = { flashcards: 'Flashcards', study: 'Study', test: 'Test' };
 function date(value) { return value ? new Date(value).toLocaleString(locale.value==='pt'?'pt-PT':'en-GB') : t('Not yet practiced'); }
 function outcome(session) { return session ? `${session.correct} / ${session.total} ${session.mode === 'flashcards' ? t('marked known') : t('correct')}${session.mode === 'test' ? ` · ${session.percent}%` : ''}` : t('No completed sessions'); }
@@ -16,6 +17,7 @@ function outcome(session) { return session ? `${session.correct} / ${session.tot
                 <p class="muted small">{{ date(summary.modes[mode]?.last?.completed_at) }}</p>
                 <p v-if="mode === 'test' && summary.modes[mode]?.best_percent !== null && summary.modes[mode]?.best_percent !== undefined">{{t('Best:')}} {{ Math.round(summary.modes[mode].best_percent) }}%</p>
                 <p v-if="mode === 'flashcards'" class="muted small">{{t("Self-assessed, not a test score.")}}</p>
+                <Link :href="`${base}/study?mode=${mode}`" class="button history-start" :aria-label="t('Start {mode} →', {mode:t(label)})">{{ t('Start →') }}</Link>
             </article>
         </div>
         <h3 class="recent-heading">{{t("Recent sessions")}}</h3>
@@ -25,13 +27,18 @@ function outcome(session) { return session ? `${session.correct} / ${session.tot
     </section>
 </template>
 <style scoped>
-.study-history{margin-bottom:2rem}.history-mode{padding:1rem;border:1px solid #dce5e4;border-radius:12px}.history-list{padding:0;list-style:none}.history-list li{display:flex;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid #dce5e4}.history-list time{font-size:.85rem;color:#52656d}@media(max-width:600px){.history-list li{flex-direction:column}.section-heading{flex-wrap:wrap}}
+.study-history{margin-bottom:2rem}.history-mode{display:flex;flex-direction:column;padding:1rem;border:1px solid #dce5e4;border-radius:12px}.history-list{padding:0;list-style:none}.history-list li{display:flex;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid #dce5e4}.history-list time{font-size:.85rem;color:#52656d}@media(max-width:600px){.history-list li{flex-direction:column}.section-heading{flex-wrap:wrap}}
 
 .history-mode--flashcards{background:#e9f7ef;border-color:#b6ddc8;color:#164b3c}
 .history-mode--study{background:#edf3ff;border-color:#c3d5f3;color:#204779}
 .history-mode--test{background:#f3edff;border-color:#d7c7ef;color:#573778}
 .history-mode .muted{color:inherit;opacity:.85}
 .history-mode h3{margin-bottom:.8rem}
+.history-start{width:100%;margin-top:auto;color:#fff;border:0}
+.history-mode--flashcards .history-start{background:linear-gradient(135deg,#17644d,#0e8174)}
+.history-mode--study .history-start{background:linear-gradient(135deg,#24549b,#3474b6)}
+.history-mode--test .history-start{background:linear-gradient(135deg,#65408f,#8a4b97)}
+.history-start:hover{filter:brightness(.92);color:#fff}
 .recent-heading{margin-top:2.25rem;margin-bottom:1.1rem}
 .study-history>.section-heading .pill{background:#e9f7ef;border-color:#b6ddc8;color:#24604a}
 </style>
