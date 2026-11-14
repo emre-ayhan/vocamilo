@@ -14,6 +14,7 @@ import Errors from '../../Components/Errors.vue';
 const { t } = useI18n();
 const page = usePage();
 const props = defineProps({
+    sharing: { type: Object, default: () => ({access:'guests',participants:[],blocked:[]}) },
     collection: Object, shared: { type: Boolean, default: false }, isOwner: { type: Boolean, default: false },
     availableWords: { type: Array, default: () => [] }, next_cursor: { type: String, default: null },
     summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) },
@@ -66,8 +67,32 @@ async function copy() {
     try { await navigator.clipboard.writeText(shareUrl.value); copyStatus.value = t('Link copied'); }
     catch { copyStatus.value = t('Select and copy the link below.'); }
 }
-function disable() {
-    if (confirm(t('Turn sharing off? Anyone using this link will lose access. A new link is created if you share again.'))) router.delete(`${base.value}/sharing`);
+const sharingBusy=ref(false),sharingErrors=ref({}),access=ref(props.sharing.access??'guests');
+watch(()=>props.sharing.access,value=>{access.value=value??'guests';});
+watch(()=>props.collection.share_uuid,()=>{copyStatus.value='';});
+function sharingAction(method,url,data={}){
+ if(sharingBusy.value)return;
+ sharingBusy.value=true;sharingErrors.value={};
+ router.visit(url,{method,data,preserveScroll:true,onError:errors=>{sharingErrors.value=errors;},onFinish:()=>{sharingBusy.value=false;}});
+}
+function toggleSharing(event){
+ event.target.checked=Boolean(props.collection.share_uuid);
+ if(props.collection.share_uuid){
+  if(!confirm(t('Turn sharing off? The link will stop working and all joined accounts will lose access. They must join again after sharing is enabled.')))return;
+  sharingAction('delete',`${base.value}/sharing`);
+ }else sharingAction('post',`${base.value}/sharing`);
+}
+function rotateLink(){
+ if(confirm(t('Refresh the sharing link? The old link will stop working immediately. Existing members keep access and blocked accounts stay blocked.')))sharingAction('post',`${base.value}/sharing/rotate`);
+}
+function removeMember(person){
+ if(confirm(t('Remove {name}? They lose membership but can join again using an active link.',{name:person.name})))sharingAction('delete',`${base.value}/members/${person.id}`);
+}
+function blockMember(person){
+ if(confirm(t('Block {name}? This account will lose access and cannot rejoin, even with a refreshed link. In guest mode they can still view while signed out.',{name:person.name})))sharingAction('post',`${base.value}/blocks/${person.id}`);
+}
+function unblockMember(person){
+ if(confirm(t('Unblock {name}? They can join again using an active link. Membership is not restored automatically.',{name:person.name})))sharingAction('delete',`${base.value}/blocks/${person.id}`);
 }
 function remove(word) {
     if (confirm(t('Remove “{term}” from this collection? It stays in your word pool.', { term: word.term }))) router.delete(`${base.value}/words/${word.id}`);
@@ -93,10 +118,16 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
         </section>
         <StudySummary v-if="!shared" :summary="summary" :base="base" />
         <div v-if="shared" class="mode-grid guest-mode-grid"><Link v-for="item in modes" :key="item.mode" :href="`${base}/study?mode=${item.mode}`" class="mode-card" :class="`mode-card--${item.mode}`"><div class="guest-mode-copy"><h3><ModeIcon :mode="item.mode"/>{{ t(item.name) }}</h3><p>{{ t(item.text) }}</p></div><b class="guest-start">{{ t('Start') }}<StartIcon/></b></Link></div>
-        <section v-if="owner" class="sharing panel">
-            <div><span class="eyebrow">{{ t('KNOWLEDGE IS BETTER SHARED') }}</span><h3>{{ t(collection.share_uuid ? 'Your link is ready.' : 'Keep it private. Or pass it on.') }}</h3><p class="muted">{{ t(collection.share_uuid ? 'Anyone with this link can study without signing in. Your private notes stay private.' : 'Turn on link sharing whenever you want. Your personal notes are never shared.') }}</p></div>
-            <div class="actions"><button v-if="!collection.share_uuid" class="button secondary" @click="router.post(`${base}/sharing`)">{{ t('Enable link sharing') }}</button><template v-else><button class="button" @click="copy">{{ t('Copy link') }}</button><button class="text-button danger" @click="disable">{{ t('Turn off') }}</button></template></div>
-            <div v-if="collection.share_uuid" class="share-link"><input readonly :value="shareUrl" :aria-label="t('Collection share link')" @focus="$event.target.select()" /><small role="status">{{ copyStatus }}</small></div>
+        <section v-if="owner" class="sharing panel sharing-management" :aria-busy="sharingBusy">
+            <div class="sharing-heading"><div><span class="eyebrow">{{ t('KNOWLEDGE IS BETTER SHARED') }}</span><h3>{{ t(collection.share_uuid ? 'Your link is ready.' : 'Keep it private. Or pass it on.') }}</h3></div><label class="speech-toggle sharing-switch"><span>{{t('Link sharing')}}</span><input type="checkbox" role="switch" :checked="Boolean(collection.share_uuid)" :aria-checked="Boolean(collection.share_uuid)" :disabled="sharingBusy" @change="toggleSharing"/><span class="speech-toggle-track" aria-hidden="true"></span></label></div>
+            <Errors :errors="sharingErrors"/>
+            <form class="sharing-access" @submit.prevent="sharingAction('put',`${base}/sharing/access`,{access})"><label>{{t('Who can open the link?')}}<select v-model="access" :disabled="sharingBusy"><option value="guests">{{t('Everyone, including guests')}}</option><option value="signed_in">{{t('Signed-in accounts only')}}</option></select></label><button class="button secondary" :disabled="sharingBusy||access===sharing.access">{{t('Save access settings')}}</button></form>
+            <p class="muted small">{{t('Your private notes and learning history are never shared.')}}</p>
+            <p v-if="sharing.access==='guests'" class="notice">{{t('Guest access cannot identify signed-out visitors. A blocked account can still view the collection while signed out. Choose signed-in access to enforce account blocking.')}}</p>
+            <div v-if="collection.share_uuid" class="share-link"><input readonly :value="shareUrl" :aria-label="t('Collection share link')" @focus="$event.target.select()"/><div class="share-link-actions"><button type="button" class="button secondary" :disabled="sharingBusy" @click="rotateLink">{{t('Refresh link')}}</button><button type="button" class="button" :disabled="sharingBusy" @click="copy">{{t('Copy link')}}</button></div><small role="status">{{copyStatus}}</small></div>
+            <p v-else class="muted small">{{t('Link sharing is off. Enable it to create a new sharing link.')}}</p>
+            <section class="sharing-people" aria-labelledby="joined-heading"><h4 id="joined-heading">{{t('Joined accounts ({count})',{count:sharing.participants?.length??0})}}</h4><p v-if="!sharing.participants?.length" class="muted small">{{t('No accounts have joined this collection.')}}</p><article v-for="person in sharing.participants" :key="person.id" class="sharing-person"><strong>{{person.name}}</strong><div class="actions"><button type="button" class="text-button" :disabled="sharingBusy" @click="removeMember(person)">{{t('Remove member')}}</button><button type="button" class="text-button danger" :disabled="sharingBusy" @click="blockMember(person)">{{t('Block account')}}</button></div></article></section>
+            <section v-if="sharing.blocked?.length" class="sharing-people" aria-labelledby="blocked-heading"><h4 id="blocked-heading">{{t('Blocked accounts ({count})',{count:sharing.blocked.length})}}</h4><article v-for="person in sharing.blocked" :key="person.id" class="sharing-person"><strong>{{person.name}}</strong><button type="button" class="text-button" :disabled="sharingBusy" @click="unblockMember(person)">{{t('Unblock account')}}</button></article></section>
         </section>
         <div class="section-heading"><div><h2>{{ t('{count} words to discover', { count: totalWords }) }}</h2><p class="muted small word-order">{{ t('Newest words first') }}</p></div><button v-if="owner" class="button secondary" @click="showAdd = true">{{ t('+ Add from pool') }}</button></div>
         <div class="word-list">
@@ -115,4 +146,6 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
 <style scoped>
 .mode-card{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:16px}.guest-mode-copy{min-width:0}.guest-mode-copy h3{display:flex;align-items:center;gap:8px;margin:0 0 10px}.guest-mode-copy p{margin:0}.guest-mode-copy :deep(.mode-icon){flex-shrink:0}.mode-card .guest-start{align-self:center;flex-shrink:0;justify-content:center;gap:8px;min-width:112px;min-height:44px;padding:12px 20px;font-size:14px;margin-top:0}
 .guest-mode-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}.mode-card .guest-start{min-width:100px}@media(max-width:760px){.guest-mode-grid{grid-template-columns:1fr}}@media(max-width:360px){.mode-card{padding:18px;gap:10px}.mode-card .guest-start{min-width:84px;padding:10px 12px}}
+.sharing-management{display:block}.sharing-management .sharing-heading{max-width:none;width:100%;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.sharing-switch{flex-shrink:0;margin:0}.sharing-access{display:flex;align-items:flex-end;gap:12px;margin:16px 0}.sharing-access label{flex:1;margin:0}.sharing-access button{flex-shrink:0}.sharing-management .share-link{display:block;width:100%}.share-link-actions{display:flex;justify-content:space-between;gap:12px;margin:12px 0}.sharing-people{border-top:1px solid var(--line,#deded8);margin-top:20px;padding-top:12px}.sharing-person{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}.sharing-person strong{overflow-wrap:anywhere;min-width:0}.sharing-person .actions{flex-shrink:0}@media(max-width:600px){.sharing-heading{gap:8px}.sharing-heading h3{font-size:1.05rem}.sharing-access,.sharing-person{align-items:stretch;flex-direction:column}.sharing-switch{font-size:.8rem}.share-link-actions .button{flex:1;padding:10px}.sharing-person .actions{justify-content:flex-start}}
+.sharing-switch{position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;cursor:pointer}.sharing-switch input{position:absolute;opacity:0;width:1px;height:1px}.sharing-switch .speech-toggle-track{position:relative;display:inline-block;flex:0 0 42px;width:42px;height:24px;border-radius:20px;background:#a5afad;transition:background .15s}.sharing-switch .speech-toggle-track:after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:white;transition:transform .15s}.sharing-switch input:checked+.speech-toggle-track{background:#157e73}.sharing-switch input:checked+.speech-toggle-track:after{transform:translateX(18px)}.sharing-switch input:focus-visible+.speech-toggle-track{outline:3px solid #163c55;outline-offset:3px}.sharing-switch input:disabled+.speech-toggle-track{opacity:.5}@media(prefers-reduced-motion:reduce){.sharing-switch .speech-toggle-track,.sharing-switch .speech-toggle-track:after{transition:none}}
 </style>

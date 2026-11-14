@@ -18,7 +18,7 @@ class CollectionAccess
         }
         $id = DB::transaction(function () use ($r, $uuid) {
             $c = Collection::where('share_uuid', $uuid)->lockForUpdate()->first();
-            if (! $c) {
+            if (! $c || $c->isBlocked($r->user()->id)) {
                 return null;
             }
             if ($c->user_id !== $r->user()->id) {

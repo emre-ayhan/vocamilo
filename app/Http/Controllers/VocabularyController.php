@@ -10,9 +10,9 @@ class VocabularyController extends Controller
 {
     public function dashboard(Request $r)
     {
-        $accessible = Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))));
+        $accessible = Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))));
 
-        return Inertia::render('Dashboard', ['stats' => ['words' => $r->user()->words()->count(), 'collections' => (clone $accessible)->count(), 'shared' => $r->user()->collections()->whereNotNull('share_uuid')->count(), 'joined' => Collection::whereNotNull('share_uuid')->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))->count()], 'collections' => (clone $accessible)->withCount('words')->latest()->take(6)->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id]), 'recentWords' => $r->user()->words()->latest()->take(5)->get()]);
+        return Inertia::render('Dashboard', ['stats' => ['words' => $r->user()->words()->count(), 'collections' => (clone $accessible)->count(), 'shared' => $r->user()->collections()->whereNotNull('share_uuid')->count(), 'joined' => Collection::whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))->count()], 'collections' => (clone $accessible)->withCount('words')->latest()->take(6)->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id]), 'recentWords' => $r->user()->words()->latest()->take(5)->get()]);
     }
 
     public function index(Request $r)

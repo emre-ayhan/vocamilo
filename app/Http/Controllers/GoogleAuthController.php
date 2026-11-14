@@ -157,7 +157,7 @@ class GoogleAuthController extends Controller
         $r->session()->forget('google_link');
         $r->session()->regenerate();
 
-        return CollectionAccess::finishPendingJoin($r) ?? redirect('/dashboard');
+        return CollectionAccess::finishPendingJoin($r) ?? redirect()->intended('/dashboard');
     }
 
     private function error(string $message)

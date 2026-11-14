@@ -13,9 +13,19 @@ class Collection extends Model
         return $this->belongsToMany(User::class, 'collection_members')->withTimestamps();
     }
 
+    public function blockedUsers()
+    {
+        return $this->belongsToMany(User::class, 'collection_blocks')->withTimestamps();
+    }
+
+    public function isBlocked(int $userId): bool
+    {
+        return $this->blockedUsers()->where('users.id', $userId)->exists();
+    }
+
     public static function accessibleTo(int $userId, int $id): self
     {
-        return self::whereKey($id)->where(fn ($q) => $q->where('user_id', $userId)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereHas('members', fn ($q) => $q->where('users.id', $userId))))->firstOrFail();
+        return self::whereKey($id)->where(fn ($q) => $q->where('user_id', $userId)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $userId))->whereHas('members', fn ($q) => $q->where('users.id', $userId))))->firstOrFail();
     }
 
     public function user()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Collection;
 use App\Models\StudySession;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,7 +14,7 @@ class CollectionController extends Controller
 {
     public function index(Request $r)
     {
-        return Inertia::render('Collections/Index', ['collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->withCount('words')->latest()->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id])]);
+        return Inertia::render('Collections/Index', ['collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->withCount('words')->latest()->get()->map(fn ($c) => ['id' => $c->id, 'title' => $c->title, 'description' => $c->description, 'share_uuid' => $c->share_uuid, 'words_count' => $c->words_count, 'isOwner' => $c->user_id === $r->user()->id])]);
     }
 
     public function store(Request $r)
@@ -28,7 +29,7 @@ class CollectionController extends Controller
         $c = Collection::accessibleTo($r->user()->id, $collection);
         $owner = $c->user_id === $r->user()->id;
 
-        return Inertia::render('Collections/Show', ['collection' => $this->payload($c, false, $r->user()->id, true), 'shared' => false, 'isOwner' => $owner, 'member' => ! $owner, 'summary' => StudySession::summaryFor($c, $r->user()->id), 'availableWords' => $owner ? $r->user()->words()->whereDoesntHave('collections', fn ($q) => $q->where('collections.id', $c->id))->select('id', 'term', 'definition')->orderBy('term')->get() : []]);
+        return Inertia::render('Collections/Show', ['collection' => $this->payload($c, false, $r->user()->id, true), 'shared' => false, 'isOwner' => $owner, 'member' => ! $owner, 'summary' => StudySession::summaryFor($c, $r->user()->id), ...($owner ? ['sharing' => $this->sharingData($c)] : []), 'availableWords' => $owner ? $r->user()->words()->whereDoesntHave('collections', fn ($q) => $q->where('collections.id', $c->id))->select('id', 'term', 'definition')->orderBy('term')->get() : []]);
     }
 
     public function words(Request $r, int $collection)
@@ -45,7 +46,7 @@ class CollectionController extends Controller
 
     public function join(Request $r, string $uuid)
     {
-        $c = $this->shared($uuid);
+        $c = $this->shared($uuid, true);
         if (! $r->user()) {
             $r->session()->put('pending_collection_uuid', $uuid);
 
@@ -53,6 +54,7 @@ class CollectionController extends Controller
         }
         DB::transaction(function () use ($c, $r, $uuid) {
             $locked = Collection::whereKey($c->id)->where('share_uuid', $uuid)->lockForUpdate()->firstOrFail();
+            abort_if($locked->isBlocked($r->user()->id), 404);
             if ($locked->user_id !== $r->user()->id) {
                 $locked->members()->syncWithoutDetaching([$r->user()->id]);
             }
@@ -130,7 +132,7 @@ class CollectionController extends Controller
             $c->save();
         }
 
-        return back()->with('success', __('Anyone with this link can study this collection. Personal notes stay private.'));
+        return back()->with('success', __('Sharing enabled. Personal notes stay private.'));
     }
 
     public function unshare(Request $r, int $collection)
@@ -144,6 +146,72 @@ class CollectionController extends Controller
         });
 
         return back()->with('success', __('Sharing disabled. The previous link no longer works.'));
+    }
+
+    public function sharingAccess(Request $r, int $collection)
+    {
+        $c = $this->owned($r, $collection);
+        $d = $r->validate(['access' => 'required|in:guests,signed_in']);
+        $c->share_access = $d['access'];
+        $c->save();
+
+        return back()->with('success', __('Sharing access updated.'));
+    }
+
+    public function rotateSharing(Request $r, int $collection)
+    {
+        $c = $this->owned($r, $collection);
+        DB::transaction(function () use ($c) {
+            $locked = Collection::whereKey($c->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->share_uuid, 422, __('Enable sharing before replacing the link.'));
+            $locked->share_uuid = (string) Str::uuid();
+            $locked->save();
+        });
+
+        return back()->with('success', __('Sharing link replaced. Existing members keep access.'));
+    }
+
+    public function removeMember(Request $r, int $collection, int $user)
+    {
+        $c = $this->owned($r, $collection);
+        abort_if($user === $c->user_id, 422);
+        DB::transaction(function () use ($c, $user) {
+            $locked = Collection::whereKey($c->id)->lockForUpdate()->firstOrFail();
+            $locked->members()->detach($user);
+        });
+
+        return back()->with('success', __('Member removed. They can join again using the link.'));
+    }
+
+    public function blockMember(Request $r, int $collection, int $user)
+    {
+        $c = $this->owned($r, $collection);
+        abort_if($user === $c->user_id, 422);
+        DB::transaction(function () use ($c, $user) {
+            $locked = Collection::whereKey($c->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->members()->where('users.id', $user)->exists() || $locked->isBlocked($user), 404);
+            $locked->blockedUsers()->syncWithoutDetaching([$user]);
+            $locked->members()->detach($user);
+        });
+
+        return back()->with('success', __('Account blocked from this collection.'));
+    }
+
+    public function unblockMember(Request $r, int $collection, int $user)
+    {
+        $c = $this->owned($r, $collection);
+        DB::transaction(function () use ($c, $user) {
+            Collection::whereKey($c->id)->lockForUpdate()->firstOrFail()->blockedUsers()->detach($user);
+        });
+
+        return back()->with('success', __('Account unblocked. They can join again using the link.'));
+    }
+
+    private function sharingData(Collection $c): array
+    {
+        return ['access' => $c->share_access,
+            'participants' => $c->members()->get(['users.id', 'users.name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'joined_at' => $u->pivot->created_at?->toIso8601String()])->all(),
+            'blocked' => $c->blockedUsers()->get(['users.id', 'users.name'])->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'blocked_at' => $u->pivot->created_at?->toIso8601String()])->all()];
     }
 
     public function publicShow(string $uuid)
@@ -177,11 +245,18 @@ class CollectionController extends Controller
         return $r->user()->collections()->findOrFail($id);
     }
 
-    private function shared(string $uuid): Collection
+    private function shared(string $uuid, bool $joining = false): Collection
     {
         abort_unless(Str::isUuid($uuid), 404);
 
-        return Collection::where('share_uuid', $uuid)->firstOrFail();
+        $c = Collection::where('share_uuid', $uuid)->firstOrFail();
+        $viewer = request()->user();
+        abort_if($viewer && $c->isBlocked($viewer->id), 404);
+        if (! $viewer && $c->share_access === 'signed_in' && ! $joining) {
+            throw new AuthenticationException;
+        }
+
+        return $c;
     }
 
     private function data(Request $r): array

@@ -89,6 +89,8 @@ class StudySessionController extends Controller
         $c = Collection::accessibleTo($r->user()->id, $collection);
 
         return DB::transaction(function () use ($r, $c, $session) {
+            Collection::whereKey($c->id)->lockForUpdate()->firstOrFail();
+            Collection::accessibleTo($r->user()->id, $c->id);
             $s = StudySession::whereKey($session)->where('collection_id', $c->id)->where('user_id', $r->user()->id)->lockForUpdate()->firstOrFail();
             if ($s->completed_at) {
                 return response()->json($this->completed($s));

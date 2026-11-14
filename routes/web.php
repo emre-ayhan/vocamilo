@@ -44,6 +44,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/collections/{collection}', [CollectionController::class, 'destroy']);
     Route::post('/collections/{collection}/words', [CollectionController::class, 'addWords']);
     Route::delete('/collections/{collection}/words/{word}', [CollectionController::class, 'removeWord']);
+    Route::put('/collections/{collection}/sharing/access', [CollectionController::class, 'sharingAccess']);
+    Route::post('/collections/{collection}/sharing/rotate', [CollectionController::class, 'rotateSharing']);
+    Route::delete('/collections/{collection}/members/{user}', [CollectionController::class, 'removeMember']);
+    Route::post('/collections/{collection}/blocks/{user}', [CollectionController::class, 'blockMember']);
+    Route::delete('/collections/{collection}/blocks/{user}', [CollectionController::class, 'unblockMember']);
     Route::post('/collections/{collection}/sharing', [CollectionController::class, 'share']);
     Route::delete('/collections/{collection}/sharing', [CollectionController::class, 'unshare']);
     Route::post('/collections/{collection}/sessions', [StudySessionController::class, 'store'])->middleware('throttle:30,1');

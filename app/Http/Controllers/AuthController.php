@@ -33,7 +33,7 @@ class AuthController extends Controller
         Auth::login($user);
         $r->session()->regenerate();
 
-        return CollectionAccess::finishPendingJoin($r) ?? redirect('/dashboard');
+        return CollectionAccess::finishPendingJoin($r) ?? redirect()->intended('/dashboard');
     }
 
     public function authenticate(Request $r)
