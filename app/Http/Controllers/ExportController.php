@@ -16,7 +16,7 @@ class ExportController extends Controller
     public function collection(Request $r, int $collection)
     {
         $c = Collection::accessibleTo($r->user()->id, $collection);
-        $notes = $c->user_id === $r->user()->id ? null : DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $r->user()->id)->pluck('note', 'word_id');
+        $notes = $c->user_id === $r->user()->id ? null : DB::table('user_word_notes')->where('user_id', $r->user()->id)->pluck('note', 'word_id');
 
         return $this->csv($c->words()->get()->map(fn ($w) => [$w->term, $w->definition, $notes === null ? ($w->note ?? '') : ($notes[$w->id] ?? '')]), 'collection-'.$c->id.'.csv');
     }

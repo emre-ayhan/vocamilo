@@ -78,7 +78,7 @@ class StudySessionController extends Controller
         })->values()->all();
         $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => in_array($d['mode'], ['study', 'test'], true) ? 3 : 1]);
         // Notes may be displayed privately, but are not copied into historical data.
-        $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $r->user()->id)->pluck('note', 'word_id');
+        $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('user_word_notes')->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
 
         return response()->json(['id' => $session->id, 'questions' => $display, 'rules_version' => $session->rules_version], 201);

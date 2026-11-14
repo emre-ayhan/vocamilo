@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/words/export', [ExportController::class, 'pool']);
     Route::get('/collections/{collection}/export', [ExportController::class, 'collection']);
     Route::get('/collections/{collection}/words', [CollectionController::class, 'words']);
+    Route::get('/collections/{collection}/words/{word}/note', [CollectionController::class, 'getNote']);
     Route::put('/collections/{collection}/words/{word}/note', [CollectionController::class, 'note']);
     Route::get('/words', [VocabularyController::class, 'index']);
     Route::post('/words', [VocabularyController::class, 'store']);

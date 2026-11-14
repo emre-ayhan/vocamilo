@@ -395,5 +395,9 @@ export default {
   "Start {mode}": "Começar {mode}",
   "No words in this collection": "Esta coleção não tem palavras",
   "Collection words": "Palavras na coleção",
-  "Success is your latest correct or known first attempts divided by all current collection words, including unpracticed words. Automatic retries do not change the first result. Empty collections show no percentage. Missing historical word records cannot be reconstructed.": "O sucesso corresponde às suas últimas primeiras tentativas corretas ou marcadas como conhecidas, dividido por todas as palavras atuais da coleção, incluindo as não praticadas. As repetições automáticas não alteram o primeiro resultado. Coleções vazias não mostram percentagem. Registos históricos em falta por palavra não podem ser reconstruídos."
+  "Success is your latest correct or known first attempts divided by all current collection words, including unpracticed words. Automatic retries do not change the first result. Empty collections show no percentage. Missing historical word records cannot be reconstructed.": "O sucesso corresponde às suas últimas primeiras tentativas corretas ou marcadas como conhecidas, dividido por todas as palavras atuais da coleção, incluindo as não praticadas. As repetições automáticas não alteram o primeiro resultado. Coleções vazias não mostram percentagem. Registos históricos em falta por palavra não podem ser reconstruídos.",
+  "Your note could not be loaded or saved. Check your access and connection, then try again.": "Não foi possível carregar ou guardar a sua nota. Verifique o acesso e a ligação e tente novamente.",
+  "Your note is private and follows this word across your collections.": "A sua nota é privada e acompanha esta palavra nas suas coleções.",
+  "Retry": "Tentar novamente",
+  "Saving…": "A guardar…"
 };

@@ -61,15 +61,28 @@ class CollectionController extends Controller
         return redirect('/collections/'.$c->id);
     }
 
+    public function getNote(Request $r, int $collection, int $word)
+    {
+        $c = Collection::accessibleTo($r->user()->id, $collection);
+        $w = $c->words()->findOrFail($word);
+        $note = $w->user_id === $r->user()->id ? $w->note : DB::table('user_word_notes')->where('user_id', $r->user()->id)->where('word_id', $word)->value('note');
+
+        return response()->json(['note' => $note]);
+    }
+
     public function note(Request $r, int $collection, int $word)
     {
         $c = Collection::accessibleTo($r->user()->id, $collection);
         $w = $c->words()->findOrFail($word);
-        $d = $r->validate(['note' => 'nullable|string|max:5000']);
+        $d = $r->validate(['note' => 'present|nullable|string|max:5000']);
         if ($c->user_id === $r->user()->id) {
             $w->update(['note' => $d['note'] ?? null]);
         } else {
-            DB::table('collection_notes')->updateOrInsert(['collection_id' => $c->id, 'user_id' => $r->user()->id, 'word_id' => $word], ['note' => $d['note'] ?? null, 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('user_word_notes')->upsert([['user_id' => $r->user()->id, 'word_id' => $word, 'note' => $d['note'] ?? null, 'created_at' => now(), 'updated_at' => now()]], ['user_id', 'word_id'], ['note', 'updated_at']);
+        }
+
+        if ($r->expectsJson()) {
+            return response()->json(['note' => $d['note'] ?? null]);
         }
 
         return back()->with('success', __('Note saved.'));
@@ -178,7 +191,7 @@ class CollectionController extends Controller
 
     private function wordData(Collection $c, $words, ?int $learner): array
     {
-        $notes = $learner && $learner !== $c->user_id ? DB::table('collection_notes')->where('collection_id', $c->id)->where('user_id', $learner)->pluck('note', 'word_id') : collect();
+        $notes = $learner && $learner !== $c->user_id ? DB::table('user_word_notes')->where('user_id', $learner)->pluck('note', 'word_id') : collect();
 
         return $words->map(function ($w) use ($c, $learner, $notes) {
             $row = $w->only('id', 'term', 'definition');
