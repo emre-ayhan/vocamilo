@@ -52,15 +52,22 @@ test('Manage members is full width on a separate row after refresh and copy',()=
 });
 
 test('member progress is integrated, server-permitted and read-only with touch-sized actions',()=>{
- assert.match(members,/selectedMember:\{type:Object,default:null\}/);assert.match(members,/if\(!person.can_view_progress\)return/);
- assert.match(members,/selectedMember&&!selecting&&!sharingBusy/);assert.match(members,/StudySummary :summary="selectedMember.summary" :base="base" read-only/);
+ assert.match(members,/selectedMember:\{type:Object,default:null\}/);assert.match(members,/if\(!person.can_view_progress\|\|selecting.value\|\|sharingBusy.value\)return/);
+ assert.match(members,/v-if="selectedMember"/);assert.match(members,/StudySummary :summary="selectedMember.summary" :base="base" read-only/);
  assert.doesNotMatch(members,/href="`\$\{base\}\/progress`"/);assert.match(members,/participants_page:props.participants.current_page,blocked_page:props.blocked.current_page/);
  assert.match(members,/min-height:46px/);assert.match(members,/Newest members first/);
  const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');assert.match(summary,/readOnly: \{type:Boolean,default:false\}/);assert.match(summary,/<Link v-if="!readOnly"/);assert.match(summary,/SHARED MEMBER PROGRESS/);
 });
 
 test('viewing progress focuses the returned member summary only and narrow desktop actions wrap',()=>{
- assert.match(members,/function visitMembers\(data,focusProgress=false\)/);assert.match(members,/focusProgress&&props.selectedMember\?\.id===data.member/);assert.match(members,/await nextTick\(\)/);assert.match(members,/scrollIntoView\(\{behavior:'instant',block:'start'\}\)/);assert.match(members,/ref="progressHeading" id="selected-progress-title" tabindex="-1"/);assert.match(members,/max-width:1024px/);assert.match(members,/Current sharing consent and an active account are required/);
+ assert.match(members,/function visitMembers\(data,focusProgress=false,restoreList=false\)/);assert.match(members,/focusProgress&&props.selectedMember\?\.id===data.member/);assert.match(members,/await nextTick\(\)/);assert.match(members,/scrollIntoView\(\{behavior:'instant',block:'start'\}\)/);assert.match(members,/ref="progressHeading" id="selected-progress-title" tabindex="-1"/);assert.match(members,/max-width:1024px/);assert.match(members,/Current sharing consent and an active account are required/);
 });
 
 test('read-only summary describes the member while personal summary retains your wording',()=>{const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');assert.match(summary,/t\(readOnly\?"Success is the member’s latest/);assert.match(summary,/:"Success is your latest/);});
+
+test('selected progress replaces lists and close preserves filters/pages and restores visible focus',()=>{
+ assert.match(members,/v-show="!selectedMember" class="member-search/);assert.match(members,/v-show="!selectedMember" class="member-lists"/);
+ assert.match(members,/v-if="selectedMember" class="panel selected-progress"/);assert.match(members,/:disabled="sharingBusy\|\|selecting" @click="closeProgress"/);
+ assert.match(members,/blocked_page:props.blocked.current_page\},false,true\)/);assert.match(members,/returnMemberId=person.id;listScroll=window.scrollY/);
+ assert.match(members,/await nextTick\(\);if\(props.selectedMember\)return/);assert.match(members,/button&&!button.disabled\?button:searchInput.value/);assert.match(members,/focusProgress&&!props.selectedMember\)\{progressUnavailable.value=true/);
+});
