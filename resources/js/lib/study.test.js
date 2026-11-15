@@ -26,7 +26,7 @@ test('Study choices use accessible native radios with circle feedback instead of
     assert.match(source,/v-else-if="mode==='study'&&checked&&answer===option&&!correct"/);
     assert.match(source,/input:focus-visible\+\.answer-choice-icon/);
     assert.match(source,/class="answer-choice-icon"[^>]*aria-hidden="true"/);
-    assert.match(source,/role="status"><strong>{{correct\?t/);
+    assert.match(source,/role="status">.*?<strong>{{feedbackCorrect\?t/);
 });
 test('mixed Study covers all selected direction and answer combinations without duplicate words',()=>{
  const pool=Array.from({length:8},(_,i)=>({id:i,term:'term'+i,definition:'meaning'+i}));

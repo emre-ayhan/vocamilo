@@ -21,7 +21,7 @@ test('gesture supports cancellation and scroll while retaining flip and action b
 });
 test('Test shows neither live correctness icons nor feedback and uses repeat payload',()=>{
  const s=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
- assert.match(s,/v-if="checked&&mode==='study'" :class="\['answer-feedback'/);
+ assert.match(s,/v-if="\(checked\|\|provisionalAnswer\)&&mode==='study'" :class="\['answer-feedback'/);
  assert.match(s,/v-if="mode==='study'&&checked&&answer===option&&correct"/);
  assert.match(s,/answers:props.mode!=='flashcards'\?studyAttemptPayload/);
  assert.doesNotMatch(s,/if\(props.mode==='test'\)next\(\)/);

@@ -1,11 +1,14 @@
 import {makeLetterBoxes,graphemes} from './letter-boxes.js';
 import {normalizeAnswer} from './study.js';
-export function createFirstEntryTracker(){
- const entries=new Map(),pending=new Map();let previous=new Map();
+export function createFirstEntryTracker(seed={}){
+ const entries=new Map(seed.entries??[]),pending=new Map(seed.pending??[]);let previous=new Map(seed.previous??[]);
  return {
+  snapshot(){return {entries:[...entries],pending:[...pending],previous:[...previous]};},
+  fork(){return createFirstEntryTracker(this.snapshot());},
+  restore(seed){entries.clear();pending.clear();for(const [index,value] of seed.entries)entries.set(index,value);for(const [index,value] of seed.pending)pending.set(index,value);previous=new Map(seed.previous);},
   record(boxes,{strict=false,finalize=false}={}){
    const changed=boxes.flatMap((box,index)=>!box.fixed&&box.value&&previous.get(index)!==box.value?[index]:[]);
-   for(const [index,value] of pending){const next=boxes[index]?.value??'';const continuation=next&&normalizeAnswer(next).normalize('NFD').startsWith(normalizeAnswer(value).normalize('NFD'));if(!continuation||(finalize&&!changed.includes(index))||changed.some(other=>other!==index)){entries.set(index,value);pending.delete(index);}}
+   for(const [index,value] of pending){const next=boxes[index]?.value??'';const continuation=next&&normalizeAnswer(next).normalize('NFD').startsWith(normalizeAnswer(value).normalize('NFD'));if(continuation&&changed.includes(index)&&normalizeAnswer(next)===normalizeAnswer(boxes[index].text)){entries.set(index,next);pending.delete(index);}else if(!continuation||(finalize&&!changed.includes(index))||changed.some(other=>other!==index)){entries.set(index,value);pending.delete(index);}}
    for(const index of changed){if(entries.has(index))continue;const box=boxes[index],value=box.value;const expected=normalizeAnswer(box.text),actual=normalizeAnswer(value);
     const prefix=!strict&&actual!==expected&&expected.normalize('NFD').startsWith(actual.normalize('NFD'));
     if(prefix&&!finalize)pending.set(index,value);else{entries.set(index,value);pending.delete(index);}

@@ -1,17 +1,19 @@
 <script setup>
+import {isCorrect} from "../lib/study.js";
 import {createFirstEntryTracker} from '../lib/first-letter-entries.js';
 import {ref,computed,nextTick,onMounted,onBeforeUnmount,useId} from 'vue';
 import {committedLetterWrong,letterState} from '../lib/arrange-letters.js';
 import {useI18n} from '../lib/i18n.js';
 import {makeLetterBoxes,editBoxes,eraseBox,boxAnswer,answerDirection,boxesComplete,graphemes,compositionBuffer} from '../lib/letter-boxes.js';
-const props=defineProps({expected:{type:String,required:true},modelValue:{type:String,default:''},disabled:Boolean,direction:String,liveFeedback:Boolean,commitKey:String,letterLayout:Array,forceText:Boolean});
+const props=defineProps({expected:{type:String,required:true},modelValue:{type:String,default:''},disabled:Boolean,direction:String,liveFeedback:Boolean,commitKey:String,letterLayout:Array,forceText:Boolean,previewCompletion:Boolean});
 const descriptionId=useId();
-const emit=defineEmits(['update:modelValue','committed-error','committed-answer']);const {t}=useI18n();
+const emit=defineEmits(['update:modelValue','committed-error','committed-answer','answer-preview']);const {t}=useI18n();
 const initialBoxes=makeLetterBoxes(props.expected);
 if(initialBoxes&&props.letterLayout){const editable=new Set(props.letterLayout.map(slot=>slot.index));initialBoxes.forEach((box,index)=>{box.fixed=!editable.has(index);box.value=box.fixed?box.text:'';});}
 const tracker=createFirstEntryTracker();
 const boxes=ref(initialBoxes);const active=ref(boxes.value?.findIndex(box=>!box.fixed)??-1);
-const draft=ref('');
+const draft=ref('');let stagedTracker=null,lastCandidate=null,acceptedPreview=false;
+function previewDraft(text){draft.value=text;if(!props.previewCompletion||!stagedTracker||acceptedPreview)return;const result=editBoxes(boxes.value,active.value,text);const exact=!!text&&boxesComplete(result.boxes)&&isCorrect(boxAnswer(result.boxes),props.expected);stagedTracker.record(result.boxes,{finalize:exact});lastCandidate=exact?{answer:boxAnswer(result.boxes),key:props.commitKey,input_mode:'slots',first_entries:stagedTracker.entries()}:null;emit('answer-preview',{key:props.commitKey,candidate:lastCandidate});}
 const displayedBoxes=computed(()=>draft.value?editBoxes(boxes.value,active.value,draft.value).boxes:boxes.value);
 function feedbackState(box){return props.liveFeedback&&box?letterState(box):'';}
 function feedbackLabel(box){const state=feedbackState(box);return state?': '+t(draft.value?(state==='incorrect'?'Preview: incorrect placement':'Preview: correct placement'):(state==='incorrect'?'Incorrect placement':'Correct placement')):'';}
@@ -22,10 +24,12 @@ function locate(){const cell=area.value?.querySelector(`[data-cell="${active.val
 async function choose(index){if(props.disabled||composition.active())return;active.value=index;await nextTick();locate();input.value?.focus();}
 function announceCommitted(value,inputMode='slots'){emit('committed-answer',{answer:value,key:props.commitKey,first_entries:inputMode==='slots'?tracker.entries():[],input_mode:inputMode});}
 function apply(result){boxes.value=result.boxes;tracker.record(boxes.value,{finalize:boxesComplete(boxes.value)&&boxAnswer(boxes.value).normalize('NFKC').toLowerCase()===props.expected.normalize('NFKC').toLowerCase()});if(props.liveFeedback&&boxes.value.some(committedLetterWrong))emit('committed-error',{key:props.commitKey});active.value=result.cursor;const value=boxesComplete(boxes.value)?boxAnswer(boxes.value):'';emit('update:modelValue',value);announceCommitted(value);nextTick(locate);}
-function commit(text){if(!props.disabled&&text)apply(editBoxes(boxes.value,active.value,text));if(input.value)input.value.value='';}
-const composition=compositionBuffer(commit,text=>{draft.value=text;});
-function startComposition(){composition.start();if(boxesComplete(boxes.value))emit('update:modelValue','');}
-function endComposition(event){composition.end(event);emit('update:modelValue',boxesComplete(boxes.value)?boxAnswer(boxes.value):'');}
+function commit(text){if(acceptedPreview)return;if(!props.disabled&&text){if(stagedTracker)tracker.restore(stagedTracker.snapshot());apply(editBoxes(boxes.value,active.value,text));}if(input.value)input.value.value='';}
+const composition=compositionBuffer(commit,previewDraft);
+function startComposition(){if(acceptedPreview)return;stagedTracker=props.previewCompletion?tracker.fork():null;composition.start();if(boxesComplete(boxes.value))emit('update:modelValue','');}
+function endComposition(event){if(acceptedPreview)return;composition.end(event);stagedTracker=null;lastCandidate=null;emit('update:modelValue',boxesComplete(boxes.value)?boxAnswer(boxes.value):'');}
+function acceptPreview(){if(!lastCandidate||acceptedPreview||props.disabled||!stagedTracker)return false;const value=lastCandidate.answer;acceptedPreview=true;tracker.restore(stagedTracker.snapshot());apply(editBoxes(boxes.value,active.value,draft.value));composition.dispose();draft.value='';stagedTracker=null;lastCandidate=null;emit('answer-preview',{key:props.commitKey,candidate:null});return value;}
+defineExpose({acceptPreview});
 function key(event){if(event.isComposing||composition.active()||event.keyCode===229){if(event.key==='Enter')event.preventDefault();return;}if(props.disabled)return;composition.key();if(event.key==='Backspace'){event.preventDefault();keyDeletion=true;apply(eraseBox(boxes.value,active.value));}else if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();const step=(event.key==='ArrowRight'?1:-1)*(textDirection.value==='rtl'?-1:1);let index=active.value+step;while(boxes.value[index]?.fixed)index+=step;if(boxes.value[index])choose(index);}}
 function beforeInput(event){if(event.inputType==='deleteContentBackward'&&!composition.active()&&!props.disabled){event.preventDefault();if(!keyDeletion)apply(eraseBox(boxes.value,active.value));keyDeletion=false;}}
 function paste(event){event.preventDefault();if(composition.active())return;composition.key();const text=event.clipboardData.getData('text');if(graphemes(text.normalize('NFKC'))?.length===boxes.value.length)active.value=0;commit(text);}

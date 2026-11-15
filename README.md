@@ -296,3 +296,9 @@ No migration is added by this scoring version. Deploy both code and rebuilt asse
 ### Live composition feedback
 
 Study letter boxes now show provisional correct/incorrect placement colors and icons during IME composition, not only after composition ends or focus changes. The preview is explicitly distinguished in accessible labels. Previously the text preview updated but a `!draft` display guard hid all placement feedback during long compositions. This display-only correction does not commit draft input, record first-entry accuracy, or auto-check the answer early. Test remains neutral until its results. Gboard-like long composition sequences are covered by automated event tests; an actual Android device has not been verified.
+
+### Completing a Study answer during long IME composition
+
+For current Study letter scoring, a fully correct composition preview can display the result and Continue before the keyboard ends composition. It remains reversible: changing the draft withdraws/recalculates the candidate and cancelling it discards staged input history. First-letter entries are tracked in a fork of the committed history, so mistakes within a long composition are preserved if that composition is accepted, without permanently scoring cancelled drafts. Continue explicitly finalizes the current candidate once before advancing. Test and historical Study sessions do not expose early completion.
+
+This is a frontend-only change with no migration. Automated long-composition, cancellation and stale-event tests substitute for, but do not establish, physical Android/Gboard verification.

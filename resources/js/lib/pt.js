@@ -1,4 +1,5 @@
 export default {
+  "Result preview. Continue confirms this answer; editing it updates the preview.": "Pré-visualização do resultado. Continuar confirma esta resposta; editá-la atualiza a pré-visualização.",
   "Preview: correct placement": "Pré-visualização: posição correta",
   "Preview: incorrect placement": "Pré-visualização: posição incorreta",
   "First-letter accuracy scoring is unavailable in this text field. Your final answer must be exact.": "A pontuação das primeiras letras não está disponível neste campo de texto. A resposta final tem de ser exata.",
