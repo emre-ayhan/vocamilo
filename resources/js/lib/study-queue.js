@@ -26,7 +26,7 @@ export function appendStudyRepeat(queue, occurrence, correct, firstWrong, rulesV
     return [...queue, { ...occurrence, ...(studyRules?{correct_count:correctCount,type:occurrence.retry_type??occurrence.type}:{}), attempt_no: attempt, occurrence_id: `${occurrence.id}:${attempt}` }];
 }
 export function studyAttemptPayload(attempts,rulesVersion=3) {
-    return attempts.map(({id,answer,self_assessed,attempt_no,had_error,skipped}) => ({word_id:id,answer,self_assessed:!!self_assessed,attempt_no,...(rulesVersion>=5?{had_error:!!had_error,skipped:!!skipped}:{})}));
+    return attempts.map(({id,answer,self_assessed,attempt_no,had_error,skipped,input_mode,first_entries}) => ({word_id:id,answer,self_assessed:!!self_assessed,attempt_no,...(rulesVersion>=5?{had_error:!!had_error,skipped:!!skipped}:{}),...(rulesVersion>=7&&!skipped&&input_mode?{input_mode,...(input_mode==='slots'?{first_entries}: {})}:{})}));
 }
 export function prioritizeGuestWords(words, learned) {
     return [...words].sort((a,b)=>Number(learned.has(a.id))-Number(learned.has(b.id)));

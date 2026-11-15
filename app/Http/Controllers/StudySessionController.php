@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Collection;
 use App\Models\StudySession;
 use App\Models\Word;
+use App\Support\LetterPlacement;
 use App\Support\StudyMastery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -96,7 +97,13 @@ class StudySessionController extends Controller
 
             return $extra + ['id' => $w->id, 'text_direction' => $w->text_direction ?? 'ltr', 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $type, 'options' => $choices->map(fn ($candidate) => $candidate->$answerKey)->all(), 'option_directions' => $choices->map(fn ($candidate) => $candidate->text_direction ?? 'ltr')->all()];
         })->values()->all();
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 6 : ($d['mode'] === 'test' ? 5 : 1)]);
+        if ($d['mode'] === 'study') {
+            foreach ($questions as &$question) {
+                $question['letter_layout'] = LetterPlacement::layout($question['expected']);
+            }
+            unset($question);
+        }
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 7 : ($d['mode'] === 'test' ? 5 : 1)]);
         // Notes may be displayed privately, but are not copied into historical data.
         $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('user_word_notes')->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
@@ -163,9 +170,12 @@ class StudySessionController extends Controller
     private function completeStudy(Request $r, StudySession $s)
     {
         $v5 = $s->rules_version >= 5;
-        $rules = ['answers' => 'required|array|min:1|max:20000', 'answers.*' => 'required|array:word_id,attempt_no,answer,self_assessed'.($v5 ? ',had_error,skipped' : ''), 'answers.*.word_id' => 'required|integer', 'answers.*.attempt_no' => 'required|integer|min:1', 'answers.*.answer' => $v5 ? 'present|nullable|string|max:5000' : 'required|string|max:5000', 'answers.*.self_assessed' => 'sometimes|boolean'];
+        $rules = ['answers' => 'required|array|min:1|max:20000', 'answers.*' => 'required|array:word_id,attempt_no,answer,self_assessed'.($v5 ? ',had_error,skipped' : '').($s->mode === 'study' && $s->rules_version >= 7 ? ',input_mode,first_entries' : ''), 'answers.*.word_id' => 'required|integer', 'answers.*.attempt_no' => 'required|integer|min:1', 'answers.*.answer' => $v5 ? 'present|nullable|string|max:5000' : 'required|string|max:5000', 'answers.*.self_assessed' => 'sometimes|boolean'];
         if ($v5) {
             $rules += ['answers.*.had_error' => 'sometimes|boolean', 'answers.*.skipped' => 'sometimes|boolean'];
+        }
+        if ($s->mode === 'study' && $s->rules_version >= 7) {
+            $rules += ['answers.*.input_mode' => 'sometimes|in:slots,text', 'answers.*.first_entries' => 'sometimes|array|max:240'];
         }
         $d = $r->validate($rules);
         $queue = array_keys($s->questions);
@@ -173,6 +183,7 @@ class StudySessionController extends Controller
         $skippedCount = 0;
         $wordSkips = [];
         $answeredCounts = [];
+        $placementAttempts = [];
         $rightCounts = [];
         $wrongCounts = [];
         $correct = 0;
@@ -214,6 +225,33 @@ class StudySessionController extends Controller
                 throw ValidationException::withMessages(['answers' => __('Choose one of the offered answers.')]);
             }
             $right = ! $skipped && ! $hadError && (self::normalize($a['answer']) === self::normalize($q['expected']) || $self);
+            if ($s->mode === 'study' && $s->rules_version >= 7) {
+                $letterType = in_array($q['type'], ['written', 'rearrange'], true);
+                if (($skipped || ! $letterType) && (isset($a['input_mode']) || isset($a['first_entries']))) {
+                    throw ValidationException::withMessages(['answers' => __('Letter entries are only accepted for completed letter answers.')]);
+                }
+                if (! $skipped && $letterType) {
+                    if (! isset($a['input_mode'])) {
+                        throw ValidationException::withMessages(['answers' => __('Choose a letter input mode.')]);
+                    }
+                    if ($self) {
+                        throw ValidationException::withMessages(['answers' => __('Letter-scored answers cannot be self-assessed.')]);
+                    }
+                    if ($a['input_mode'] === 'slots') {
+                        if (! ($q['letter_layout']['supported'] ?? false)) {
+                            throw ValidationException::withMessages(['answers' => __('Letter slots are unavailable for this answer.')]);
+                        }
+                        $metrics = LetterPlacement::score($q['letter_layout'], $q['type'], $a['first_entries'] ?? [], $a['answer']);
+                        $right = $metrics['passed'];
+                        $placementAttempts[$qi][$number] = ['input_mode' => 'slots'] + $metrics;
+                    } else {
+                        if (isset($a['first_entries'])) {
+                            throw ValidationException::withMessages(['answers' => __('Text fallback cannot include letter entries.')]);
+                        }
+                        $placementAttempts[$qi][$number] = ['input_mode' => 'text'];
+                    }
+                }
+            }
             if ($number === 1) {
                 $skippedCount += (int) $skipped;
                 $correct += (int) $right;
@@ -245,6 +283,9 @@ class StudySessionController extends Controller
             $questions = $s->questions;
             $attached = Collection::findOrFail($s->collection_id)->words()->pluck('words.id')->all();
             foreach ($questions as $qi => &$q) {
+                if (isset($placementAttempts[$qi])) {
+                    $q['placement_attempts'] = $placementAttempts[$qi];
+                }
                 $state = $current[$q['id']] ?? ['stage' => 'new', 'qualified' => false, 'baseline' => null];
                 $fresh = ($q['prior_baseline'] ?? null) === $state['baseline'] && in_array($q['id'], $attached, true);
                 $qualified = ($rightCounts[$qi] ?? 0) >= 2 && ($wordSkips[$qi] ?? 0) < 2;
@@ -271,7 +312,7 @@ class StudySessionController extends Controller
                 $q['type'] = $q['retry_type'];
             }
 
-            return $q + ['attempt_no' => $a->attempt_no, 'first_attempt' => $a->attempt_no === 1, 'answer' => $a->answer ?? '', 'correct' => $a->correct, 'self_assessed' => $a->self_assessed, 'had_error' => $a->had_error, 'skipped' => $a->skipped];
+            return $q + ['placement' => $q['placement_attempts'][$a->attempt_no] ?? null, 'attempt_no' => $a->attempt_no, 'first_attempt' => $a->attempt_no === 1, 'answer' => $a->answer ?? '', 'correct' => $a->correct, 'self_assessed' => $a->self_assessed, 'had_error' => $a->had_error, 'skipped' => $a->skipped];
         })->all();
 
         return ['mastery' => $s->mode === 'study' && $s->rules_version >= 4 ? array_map(fn ($q) => ['word_id' => $q['id'], 'stage' => $q['mastery_stage'], 'qualified' => $q['mastery_qualified'], 'applied' => $q['mastery_applied']], $s->questions) : [], 'session' => $s->result(), 'results' => $results, 'first_results' => array_values(array_filter($results, fn ($r) => $r['first_attempt']))];

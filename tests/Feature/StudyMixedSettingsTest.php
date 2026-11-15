@@ -47,6 +47,7 @@ class StudyMixedSettingsTest extends TestCase
         $this->assertSame($settings['types'], StudySession::findOrFail($s['id'])->settings['types']);
         $answers = $q->map(fn ($q) => ['word_id' => $q['id'], 'attempt_no' => 1, 'answer' => $q['expected']])->all();
         $answers = array_merge($answers, array_map(fn ($a) => [...$a, 'attempt_no' => 2], $answers));
+        StudySession::findOrFail($s['id'])->update(['rules_version' => 6]);
         $this->postJson('/collections/'.$c->id.'/sessions/'.$s['id'].'/complete', ['answers' => $answers])->assertOk()->assertJsonPath('session.correct', 9);
     }
 

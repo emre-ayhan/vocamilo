@@ -459,5 +459,11 @@
     "Live input errors are only recorded in Study written or rearranged answers.": "Os erros durante a introdução só são registados nas respostas escritas ou de reorganização de letras no Estudo.",
     "Skipping is only available in Test.": "Só é possível saltar perguntas no Teste.",
     "Skipped answers must be empty and cannot be self-assessed.": "As respostas saltadas devem estar vazias e não podem ser autoavaliadas.",
-    "Skipping is only available in Test or Study written and rearranged answers.": "Só é possível saltar no Teste ou nas respostas escritas e de reorganização de letras do Estudo."
+    "Skipping is only available in Test or Study written and rearranged answers.": "Só é possível saltar no Teste ou nas respostas escritas e de reorganização de letras do Estudo.",
+    "Complete every editable letter and include its first entry.": "Complete todas as letras editáveis e inclua a primeira entrada de cada uma.",
+    "Letter entries are only accepted for completed letter answers.": "As entradas de letras só são aceites para respostas de letras concluídas.",
+    "Choose a letter input mode.": "Escolha um modo de introdução de letras.",
+    "Letter-scored answers cannot be self-assessed.": "As respostas avaliadas por letras não podem ser autoavaliadas.",
+    "Letter slots are unavailable for this answer.": "As caixas de letras não estão disponíveis para esta resposta.",
+    "Text fallback cannot include letter entries.": "O campo de texto alternativo não pode incluir entradas de letras."
 }

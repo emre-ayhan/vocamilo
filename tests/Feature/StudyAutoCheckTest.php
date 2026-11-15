@@ -25,7 +25,14 @@ class StudyAutoCheckTest extends TestCase
 
     private function start($c, string $type = 'written', string $mode = 'study'): array
     {
-        return $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => $mode, 'settings' => ['type' => $type, 'direction' => 'term', 'order' => 'ordered', 'count' => 20]])->assertCreated()->assertJsonPath('rules_version', $mode === 'study' ? 6 : 5)->json();
+        $session = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => $mode, 'settings' => ['type' => $type, 'direction' => 'term', 'order' => 'ordered', 'count' => 20]])->assertCreated()->assertJsonPath('rules_version', $mode === 'study' ? 7 : 5)->json();
+        // Preserve historical protocol regressions for already-open sessions.
+        if ($mode === 'study') {
+            StudySession::findOrFail($session['id'])->update(['rules_version' => 6]);
+            $session['rules_version'] = 6;
+        }
+
+        return $session;
     }
 
     private function answer($q, int $n = 1, array $flags = []): array

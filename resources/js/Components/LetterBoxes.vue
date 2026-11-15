@@ -1,21 +1,25 @@
 <script setup>
+import {createFirstEntryTracker} from '../lib/first-letter-entries.js';
 import {ref,computed,nextTick,onMounted,onBeforeUnmount,useId} from 'vue';
 import {committedLetterWrong,letterState} from '../lib/arrange-letters.js';
 import {useI18n} from '../lib/i18n.js';
 import {makeLetterBoxes,editBoxes,eraseBox,boxAnswer,answerDirection,boxesComplete,graphemes,compositionBuffer} from '../lib/letter-boxes.js';
-const props=defineProps({expected:{type:String,required:true},modelValue:{type:String,default:''},disabled:Boolean,direction:String,liveFeedback:Boolean,commitKey:String});
+const props=defineProps({expected:{type:String,required:true},modelValue:{type:String,default:''},disabled:Boolean,direction:String,liveFeedback:Boolean,commitKey:String,letterLayout:Array,forceText:Boolean});
 const descriptionId=useId();
 const emit=defineEmits(['update:modelValue','committed-error','committed-answer']);const {t}=useI18n();
-const boxes=ref(makeLetterBoxes(props.expected));const active=ref(boxes.value?.findIndex(box=>!box.fixed)??-1);
+const initialBoxes=makeLetterBoxes(props.expected);
+if(initialBoxes&&props.letterLayout){const editable=new Set(props.letterLayout.map(slot=>slot.index));initialBoxes.forEach((box,index)=>{box.fixed=!editable.has(index);box.value=box.fixed?box.text:'';});}
+const tracker=createFirstEntryTracker();
+const boxes=ref(initialBoxes);const active=ref(boxes.value?.findIndex(box=>!box.fixed)??-1);
 const draft=ref('');
 const displayedBoxes=computed(()=>draft.value?editBoxes(boxes.value,active.value,draft.value).boxes:boxes.value);
 const input=ref(null),area=ref(null),position=ref({});let observer, keyDeletion=false;
 const textDirection=computed(()=>answerDirection(props.expected,props.direction));
-const supported=computed(()=>boxes.value&&active.value>=0&&boxes.value.length<=240);
+const supported=computed(()=>!props.forceText&&boxes.value&&active.value>=0&&boxes.value.length<=240);
 function locate(){const cell=area.value?.querySelector(`[data-cell="${active.value}"]`);if(cell){const a=area.value.getBoundingClientRect(),b=cell.getBoundingClientRect();position.value={left:`${b.left-a.left}px`,top:`${b.top-a.top}px`,width:`${b.width}px`,height:`${b.height}px`};}}
 async function choose(index){if(props.disabled||composition.active())return;active.value=index;await nextTick();locate();input.value?.focus();}
-function announceCommitted(value){emit('committed-answer',{answer:value,key:props.commitKey});}
-function apply(result){boxes.value=result.boxes;if(props.liveFeedback&&boxes.value.some(committedLetterWrong))emit('committed-error',{key:props.commitKey});active.value=result.cursor;const value=boxesComplete(boxes.value)?boxAnswer(boxes.value):'';emit('update:modelValue',value);announceCommitted(value);nextTick(locate);}
+function announceCommitted(value,inputMode='slots'){emit('committed-answer',{answer:value,key:props.commitKey,first_entries:inputMode==='slots'?tracker.entries():[],input_mode:inputMode});}
+function apply(result){boxes.value=result.boxes;tracker.record(boxes.value,{finalize:boxesComplete(boxes.value)&&boxAnswer(boxes.value).normalize('NFKC').toLowerCase()===props.expected.normalize('NFKC').toLowerCase()});if(props.liveFeedback&&boxes.value.some(committedLetterWrong))emit('committed-error',{key:props.commitKey});active.value=result.cursor;const value=boxesComplete(boxes.value)?boxAnswer(boxes.value):'';emit('update:modelValue',value);announceCommitted(value);nextTick(locate);}
 function commit(text){if(!props.disabled&&text)apply(editBoxes(boxes.value,active.value,text));if(input.value)input.value.value='';}
 const composition=compositionBuffer(commit,text=>{draft.value=text;});
 function startComposition(){composition.start();if(boxesComplete(boxes.value))emit('update:modelValue','');}
@@ -24,7 +28,7 @@ function key(event){if(event.isComposing||composition.active()||event.keyCode===
 function beforeInput(event){if(event.inputType==='deleteContentBackward'&&!composition.active()&&!props.disabled){event.preventDefault();if(!keyDeletion)apply(eraseBox(boxes.value,active.value));keyDeletion=false;}}
 function paste(event){event.preventDefault();if(composition.active())return;composition.key();const text=event.clipboardData.getData('text');if(graphemes(text.normalize('NFKC'))?.length===boxes.value.length)active.value=0;commit(text);}
 const fallbackValue=ref(props.modelValue??'');let fallbackComposing=false;
-function fallbackInput(event){fallbackValue.value=event.target.value;if(fallbackComposing||event.isComposing)return;emit('update:modelValue',fallbackValue.value);announceCommitted(fallbackValue.value);}
+function fallbackInput(event){fallbackValue.value=event.target.value;if(fallbackComposing||event.isComposing)return;emit('update:modelValue',fallbackValue.value);announceCommitted(fallbackValue.value,'text');}
 function fallbackStart(){fallbackComposing=true;emit('update:modelValue','');}
 function fallbackEnd(event){fallbackComposing=false;fallbackInput(event);}
 onMounted(()=>{locate();if(globalThis.ResizeObserver&&area.value){observer=new ResizeObserver(locate);observer.observe(area.value);}});onBeforeUnmount(()=>{observer?.disconnect();composition.dispose();});
@@ -42,6 +46,7 @@ onMounted(()=>{locate();if(globalThis.ResizeObserver&&area.value){observer=new R
 </template>
 <p v-if="!supported" class="muted small">{{t('Use the text field for this answer. Letter boxes are unavailable for very long answers or this browser.')}}</p>
 <p v-if="!supported&&liveFeedback" class="muted small">{{t('Live letter feedback is unavailable in this text field; the answer is checked when submitted.')}}</p>
+<p v-if="!supported&&letterLayout!==undefined&&liveFeedback" class="muted small">{{t('First-letter accuracy scoring is unavailable in this text field. Your final answer must be exact.')}}</p>
 <textarea v-if="!supported" :value="fallbackValue" @input="fallbackInput" @compositionstart="fallbackStart" @compositionend="fallbackEnd" :disabled="disabled" dir="auto" rows="3" :aria-label="t('Your answer')"/>
 </div>
 </template>

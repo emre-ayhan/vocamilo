@@ -34,7 +34,14 @@ class StudyMasteryTest extends TestCase
 
     private function start($c, array $settings = [], array $extra = []): array
     {
-        return $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study', 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 20], $settings)] + $extra)->assertCreated()->json();
+        $session = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study', 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 20], $settings)] + $extra)->assertCreated()->json();
+        // Preserve historical protocol regressions for already-open sessions.
+        if (true) {
+            StudySession::findOrFail($session['id'])->update(['rules_version' => 6]);
+            $session['rules_version'] = 6;
+        }
+
+        return $session;
     }
 
     private function answer(array $q, int $attempt = 1, ?string $answer = null): array
