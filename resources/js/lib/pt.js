@@ -1,4 +1,6 @@
 export default {
+  "Preview: correct placement": "Pré-visualização: posição correta",
+  "Preview: incorrect placement": "Pré-visualização: posição incorreta",
   "First-letter accuracy scoring is unavailable in this text field. Your final answer must be exact.": "A pontuação das primeiras letras não está disponível neste campo de texto. A resposta final tem de ser exata.",
   "Less than 80% of your first letter placements were correct.": "Menos de 80% das primeiras colocações de letras estavam corretas.",
   "{correct} of {total} first letter placements correct.": "{correct} de {total} primeiras colocações de letras corretas.",
