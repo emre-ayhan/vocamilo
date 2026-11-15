@@ -276,3 +276,11 @@ Study gives position feedback for committed written/rearranged letters. Very lon
 This remains a personal practice tool, not a secure exam. Expected answers already exist in the browser snapshot; letter banks and hints inherently disclose information. The server uses its saved expected answers for grading and validates the submitted protocol, but cannot independently prove a client-reported live input history. Older sessions retain their original rules. Guest practice stays local and unsaved; membership and personal-note access controls are unchanged.
 
 Deploy the new additive answer/session flags migration along with the code, rebuild assets, and clear caches. Reload open practice tabs before starting a new round. Physical Android/IME and screen-reader testing remains unverified in this isolated environment.
+
+### Study automatic checking and Skip for now (rules version 6)
+
+New Study written/rearranged questions automatically check an exact completed answer after input commits, then wait for Continue. A remembered placement error still makes that presentation incorrect, even if the completed answer is now exact. Composition drafts never trigger checking. Manual Check remains for older sessions and Test; Test correctness remains hidden until its result screen.
+
+Study's **Skip for now** replaces Check for these input styles. The first skip puts the word after the remaining questions; a second skip ends that word for the round as not yet learned. Skips are counted separately from the maximum three answered presentations, with the word stopping as soon as either limit (or two correct answers) is reached; at most four presentations can actually occur. Two correct answers may establish Learning, but a skip or mistake prevents Reinforced in that round. First-attempt scores never change when a skipped or incorrect first presentation is corrected later. With only one word, a repeat can appear immediately. Existing Test skip behavior is unchanged.
+
+This uses the existing `000009` feedback columns and adds no migration. Deploy frontend and backend together, rebuild assets, clear caches and reload open practice tabs. Physical Android/IME verification is still outstanding; automated composition, queue and server protocol tests cover the new behavior.

@@ -57,7 +57,7 @@ class StudyMasteryTest extends TestCase
         [, $c] = $this->fixture();
         $s = $this->start($c);
         $q = $s['questions'][0];
-        $this->assertSame(5, $s['rules_version']);
+        $this->assertSame(6, $s['rules_version']);
         $this->assertSame('new', $q['prior_stage']);
         $this->finish($c, $s, [$this->answer($q)])->assertUnprocessable();
         $r = $this->finish($c, $s, $this->twice($s))->assertOk()->assertJsonPath('session.correct', 1)->assertJsonPath('session.total_attempts', 2)->json();

@@ -1,4 +1,6 @@
 export default {
+  "Written and arranged answers are checked automatically when complete and exact. Skip for now returns a word later; skipping it twice ends it unlearned in this session. Each word has up to three answered attempts plus two skips. Mistakes and skips keep the first-attempt score unchanged.": "As respostas escritas e ordenadas são verificadas automaticamente quando estão completas e exatas. Saltar por agora apresenta a palavra mais tarde; saltá-la duas vezes termina-a sem aprendizagem nesta sessão. Cada palavra permite até três tentativas respondidas e duas saltadas. Os erros e as perguntas saltadas não melhoram a pontuação da primeira tentativa.",
+  "Skip for now": "Saltar por agora",
   "Live letter feedback is unavailable in this text field; the answer is checked when submitted.": "O feedback imediato por letra não está disponível neste campo de texto; a resposta é verificada ao enviar.",
   "Correct placement": "Posição correta",
   "Incorrect placement": "Posição incorreta",
@@ -581,7 +583,7 @@ export default {
 "Learning":"Em aprendizagem",
 "Needs practice":"Precisa de prática",
 "Learning stages":"Etapas de aprendizagem",
-"Study revisits each word later in this session. Two correct answers build Learning; a later completed session with two correct answers and no mistakes builds Reinforced. Each word has at most three attempts. With only one word, its repeat appears immediately.":"O Estudo repete cada palavra mais tarde nesta sessão. Duas respostas corretas levam a Em aprendizagem; uma sessão posterior concluída com duas respostas corretas e sem erros leva a Reforçado. Cada palavra tem no máximo três tentativas. Com apenas uma palavra, a repetição aparece imediatamente.",
+"Study revisits each word later in this session. Two correct answers build Learning; a later completed session with two correct answers and no mistakes builds Reinforced. Each word has at most three answered attempts. With only one word, its repeat appears immediately.":"O Estudo repete cada palavra mais tarde nesta sessão. Duas respostas corretas levam a Em aprendizagem; uma sessão posterior concluída com duas respostas corretas e sem erros leva a Reforçado. Cada palavra tem no máximo três tentativas. Com apenas uma palavra, a repetição aparece imediatamente.",
 "First-attempt percentages stay separate from learning stages. A mistake prevents reinforcement in this round; two correct answers can still build Learning.":"As percentagens da primeira tentativa são separadas das etapas de aprendizagem. Um erro impede o reforço nesta ronda; duas respostas corretas ainda permitem chegar a Em aprendizagem.",
 "Guest stages exist only on this open page. They are not saved to an account or shared with the owner.":"As etapas de visitantes existem apenas nesta página aberta. Não são guardadas numa conta nem partilhadas com o proprietário.",
 "Another completed session updated some stages first. These are the current saved stages.":"Outra sessão concluída atualizou algumas etapas primeiro. Estas são as etapas guardadas atualmente.",

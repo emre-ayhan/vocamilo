@@ -25,7 +25,7 @@ class StudyFeedbackTest extends TestCase
 
     private function start($c, string $mode = 'test', string $type = 'rearrange', string $direction = 'term'): array
     {
-        return $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => $mode, 'settings' => ['type' => $type, 'direction' => $direction, 'order' => 'ordered', 'count' => 20]])->assertCreated()->assertJsonPath('rules_version', 5)->json();
+        return $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => $mode, 'settings' => ['type' => $type, 'direction' => $direction, 'order' => 'ordered', 'count' => 20]])->assertCreated()->assertJsonPath('rules_version', $mode === 'study' ? 6 : 5)->json();
     }
 
     private function answer($q, int $n = 1, array $flags = []): array

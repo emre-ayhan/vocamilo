@@ -96,7 +96,7 @@ class StudySessionController extends Controller
 
             return $extra + ['id' => $w->id, 'text_direction' => $w->text_direction ?? 'ltr', 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $type, 'options' => $choices->map(fn ($candidate) => $candidate->$answerKey)->all(), 'option_directions' => $choices->map(fn ($candidate) => $candidate->text_direction ?? 'ltr')->all()];
         })->values()->all();
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => in_array($d['mode'], ['study', 'test'], true) ? 5 : 1]);
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 6 : ($d['mode'] === 'test' ? 5 : 1)]);
         // Notes may be displayed privately, but are not copied into historical data.
         $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('user_word_notes')->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
@@ -171,6 +171,8 @@ class StudySessionController extends Controller
         $queue = array_keys($s->questions);
         $attempts = [];
         $skippedCount = 0;
+        $wordSkips = [];
+        $answeredCounts = [];
         $rightCounts = [];
         $wrongCounts = [];
         $correct = 0;
@@ -195,8 +197,8 @@ class StudySessionController extends Controller
             if ($hadError && ! ($s->mode === 'study' && in_array($q['type'], ['written', 'rearrange'], true))) {
                 throw ValidationException::withMessages(['answers' => __('Live input errors are only recorded in Study written or rearranged answers.')]);
             }
-            if ($skipped && $s->mode !== 'test') {
-                throw ValidationException::withMessages(['answers' => __('Skipping is only available in Test.')]);
+            if ($skipped && ! ($s->mode === 'test' || ($s->mode === 'study' && $s->rules_version >= 6 && in_array($q['type'], ['written', 'rearrange'], true)))) {
+                throw ValidationException::withMessages(['answers' => __('Skipping is only available in Test or Study written and rearranged answers.')]);
             }
             $self = (bool) ($a['self_assessed'] ?? false);
             if ($self && ! ($s->mode === 'study' && $q['type'] === 'written' && $q['answerKey'] === 'definition')) {
@@ -219,13 +221,16 @@ class StudySessionController extends Controller
             }
             $rightCounts[$qi] = ($rightCounts[$qi] ?? 0) + (int) $right;
             $wrongCounts[$qi] = ($wrongCounts[$qi] ?? 0) + (int) ! $right;
-            // V4 repeats even initially correct words, but caps every word at three presentations.
+            $answeredCounts[$qi] = ($answeredCounts[$qi] ?? 0) + (int) ! $skipped;
+            // Legacy Study caps presentations; v6 counts answered turns separately from skips.
             $retry = $s->mode === 'study' && $s->rules_version >= 4
-                ? ($rightCounts[$qi] < 2 && $number < 3)
+                ? ($rightCounts[$qi] < 2 && ($s->rules_version >= 6 ? $answeredCounts[$qi] < 3 : $number < 3))
                 : ($s->rules_version >= 3 ? (! $right && $number < 3)
                 : (($number === 1 && ! $right) || $number === 2 || ($number >= 3 && ! $right)));
             if ($skipped) {
-                $retry = false;
+                $wordSkips[$qi] = ($wordSkips[$qi] ?? 0) + 1;
+                // The first Study v6 skip always returns later; a second skip ends this word.
+                $retry = $s->mode === 'study' && $s->rules_version >= 6 && $wordSkips[$qi] < 2;
             }
             if ($retry) {
                 $queue[] = $qi;
@@ -242,7 +247,7 @@ class StudySessionController extends Controller
             foreach ($questions as $qi => &$q) {
                 $state = $current[$q['id']] ?? ['stage' => 'new', 'qualified' => false, 'baseline' => null];
                 $fresh = ($q['prior_baseline'] ?? null) === $state['baseline'] && in_array($q['id'], $attached, true);
-                $qualified = ($rightCounts[$qi] ?? 0) >= 2;
+                $qualified = ($rightCounts[$qi] ?? 0) >= 2 && ($wordSkips[$qi] ?? 0) < 2;
                 $reinforced = $qualified && ($q['prior_qualified'] ?? false) && ($wrongCounts[$qi] ?? 0) === 0;
                 $q['mastery_applied'] = $fresh;
                 $q['mastery_stage'] = $fresh ? ($reinforced ? 'reinforced' : 'learning') : $state['stage'];
