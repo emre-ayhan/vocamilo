@@ -10,7 +10,7 @@ test('guest question and option directions remain aligned across mixed pools and
 test('vocabulary is isolated per content item; page controls are not globally flipped',()=>{
  const component=readFileSync(new URL('../Components/VocabularyText.vue',import.meta.url),'utf8');assert.match(component,/:dir="safeDirection\(direction\)"/);assert.match(component,/<bdi dir="auto">/);assert.match(component,/unicode-bidi:isolate/);assert.match(component,/overflow-wrap:anywhere/);
  for(const path of ['Words/Index','Collections/Show','Study/Session']){const source=readFileSync(new URL(`../Pages/${path}.vue`,import.meta.url),'utf8');assert.match(source,/VocabularyText/);assert.doesNotMatch(source,/<AppLayout[^>]*dir=/);}
- const session=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');assert.match(session,/option_directions\?\.\[i\]/);assert.match(session,/<textarea dir="auto"/);
+ const session=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');assert.match(session,/option_directions\?\.\[i\]/);assert.match(session,/<LetterBoxes[^>]+:direction="current.text_direction"/);const boxes=readFileSync(new URL('../Components/LetterBoxes.vue',import.meta.url),'utf8');assert.match(boxes,/dir="auto"/);
 });
 test('pool create suggests language direction but edit preserves existing direction and exposes manual override',()=>{
  for(const path of ['Pools','Index']){const source=readFileSync(new URL(`../Pages/Words/${path}.vue`,import.meta.url),'utf8');assert.match(source,/text_direction:'ltr'/);assert.match(source,/@change="directionChosen=true"/);assert.match(source,/languageDirection\(language,poolForm.text_direction,directionChosen.value\)/);}

@@ -1,4 +1,10 @@
 export default {
+  "Use the text field for this answer. Letter boxes are unavailable for very long answers or this browser.": "Use o campo de texto para esta resposta. As caixas de letras não estão disponíveis para respostas muito longas ou neste navegador.",
+  "Tap a blank box and type. Given letters stay fixed; spaces and punctuation are already included.": "Toque numa caixa vazia e escreva. As letras dadas são fixas; os espaços e a pontuação já estão incluídos.",
+  "Given: {letter}": "Dado: {letter}",
+  "Letter {number}: {letter}": "Letra {number}: {letter}",
+  "blank": "vazia",
+  "Type letters for the selected box": "Escreva letras na caixa selecionada",
   "Language": "Idioma",
   "Overview": "Visão geral",
   "Word pool": "Banco de palavras",
