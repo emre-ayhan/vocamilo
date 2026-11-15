@@ -57,7 +57,7 @@ class StudyMasteryTest extends TestCase
         [, $c] = $this->fixture();
         $s = $this->start($c);
         $q = $s['questions'][0];
-        $this->assertSame(4, $s['rules_version']);
+        $this->assertSame(5, $s['rules_version']);
         $this->assertSame('new', $q['prior_stage']);
         $this->finish($c, $s, [$this->answer($q)])->assertUnprocessable();
         $r = $this->finish($c, $s, $this->twice($s))->assertOk()->assertJsonPath('session.correct', 1)->assertJsonPath('session.total_attempts', 2)->json();
@@ -191,7 +191,7 @@ class StudyMasteryTest extends TestCase
         $this->finish($c, $s, $this->twice($s))->assertOk()->assertJsonPath('session.correct', 1)->assertJsonPath('mastery.0.applied', false);
     }
 
-    public function test_retry_type_and_option_validation_follow_snapshot_and_test_mode_stays_v3(): void
+    public function test_retry_type_and_option_validation_follow_snapshot_and_test_keeps_single_correct_completion(): void
     {
         [, $c] = $this->fixture(4);
         $s = $this->start($c, ['type' => 'choice', 'types' => ['choice', 'written'], 'directions' => ['term', 'definition']]);
@@ -212,7 +212,7 @@ class StudyMasteryTest extends TestCase
             $this->assertSame('choice', $q['retry_type']);
         }
         $test = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'test', 'settings' => ['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 1]])->assertCreated()->json();
-        $this->assertSame(3, $test['rules_version']);
+        $this->assertSame(5, $test['rules_version']);
         $this->finish($c, $test, [$this->answer($test['questions'][0])])->assertOk()->assertJsonPath('mastery', [])->assertJsonPath('session.total_attempts', 1);
     }
 

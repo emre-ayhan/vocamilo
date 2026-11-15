@@ -20,7 +20,7 @@ export function createQuestions(words,settings={},random=Math.random){
    const directionOf=value=>value===expected?word.text_direction:words.find(w=>normalizeAnswer(w[answerKey])===normalizeAnswer(value))?.text_direction;
    return {id:word.id,text_direction:word.text_direction==='rtl'?'rtl':'ltr',prompt:word[promptKey],expected,note:word.note??null,answerKey,
     options,option_directions:options.map(value=>directionOf(value)==='rtl'?'rtl':'ltr'),
-    type:variant.type==='choice'&&others.length?'choice':'written'};
+    type:variant.type==='rearrange'?'rearrange':variant.type==='choice'&&others.length?'choice':'written'};
  });
 }
 export function score(results){const correct=results.filter(r=>r.correct).length;return {correct,total:results.length,percent:results.length?Math.round(correct/results.length*100):0};}

@@ -3,14 +3,14 @@ export function normalizePracticeSettings(value, wordCount) {
  const input=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
  const max=Math.max(0,Math.min(2000,wordCount));
  const direction=['term','definition'].includes(input.direction)?input.direction:'term';
- const type=['choice','written'].includes(input.type)?input.type:'choice';
+ const type=['choice','written','rearrange'].includes(input.type)?input.type:'choice';
  const subset=(items,allowed,fallback)=>{
   const clean=Array.isArray(items)?[...new Set(items.filter(item=>allowed.includes(item)))]:[];
   return clean.length?clean:[fallback];
  };
  return {direction,type,order:['ordered','random'].includes(input.order)?input.order:'random',
   count:Number.isInteger(input.count)&&input.count>0?Math.min(input.count,max):Math.min(10,max),
-  directions:subset(input.directions,['term','definition'],direction),types:subset(input.types,['choice','written'],type)};
+  directions:subset(input.directions,['term','definition'],direction),types:subset(input.types,['choice','written','rearrange'],type)};
 }
 export function practicePreference(storage,collection,user,mode,shared=false) {
  const enabled=['study','test'].includes(mode);

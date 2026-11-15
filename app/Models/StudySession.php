@@ -15,7 +15,7 @@ class StudySession extends Model
 
     protected function casts(): array
     {
-        return ['rules_version' => 'integer', 'settings' => 'array', 'questions' => 'array', 'practice_round' => 'boolean', 'completed_at' => 'datetime'];
+        return ['skipped_count' => 'integer', 'rules_version' => 'integer', 'settings' => 'array', 'questions' => 'array', 'practice_round' => 'boolean', 'completed_at' => 'datetime'];
     }
 
     public function answers()
@@ -25,7 +25,7 @@ class StudySession extends Model
 
     public function result(): array
     {
-        return ['id' => $this->id, 'rules_version' => $this->rules_version, 'total_attempts' => $this->total_attempts ?? $this->total_count, 'repeat_count' => max(0, ($this->total_attempts ?? $this->total_count) - $this->total_count), 'mode' => $this->mode, 'practice_round' => $this->practice_round, 'completed_at' => $this->completed_at?->toIso8601String(), 'total' => $this->total_count, 'correct' => $this->correct_count, 'incorrect' => $this->total_count - ($this->correct_count ?? 0), 'percent' => $this->total_count ? (int) round(($this->correct_count ?? 0) / $this->total_count * 100) : 0, 'self_assessed' => $this->self_assessed_count];
+        return ['id' => $this->id, 'rules_version' => $this->rules_version, 'total_attempts' => $this->total_attempts ?? $this->total_count, 'repeat_count' => max(0, ($this->total_attempts ?? $this->total_count) - $this->total_count), 'mode' => $this->mode, 'practice_round' => $this->practice_round, 'completed_at' => $this->completed_at?->toIso8601String(), 'total' => $this->total_count, 'correct' => $this->correct_count, 'skipped' => $this->skipped_count ?? 0, 'incorrect' => $this->total_count - ($this->correct_count ?? 0) - ($this->skipped_count ?? 0), 'percent' => $this->total_count ? (int) round(($this->correct_count ?? 0) / $this->total_count * 100) : 0, 'self_assessed' => $this->self_assessed_count];
     }
 
     public static function summaryFor(Collection $collection, ?int $learnerId = null): array

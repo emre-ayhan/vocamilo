@@ -20,7 +20,7 @@ class TestRetryTest extends TestCase
             $c->words()->attach($w);
         }
         $this->actingAs($u);
-        $s = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'test', 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => $count], $settings)])->assertCreated()->assertJsonPath('rules_version', 3)->json();
+        $s = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'test', 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => $count], $settings)])->assertCreated()->assertJsonPath('rules_version', 5)->json();
 
         return [$c, $s];
     }

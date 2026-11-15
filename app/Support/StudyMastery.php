@@ -10,7 +10,7 @@ class StudyMastery
     public static function forLearner(int $collection, int $user): array
     {
         $states = [];
-        $sessions = StudySession::where('collection_id', $collection)->where('user_id', $user)->where('mode', 'study')->where('rules_version', 4)->whereNotNull('completed_at')->withMax('answers', 'id')->orderBy('answers_max_id')->get();
+        $sessions = StudySession::where('collection_id', $collection)->where('user_id', $user)->where('mode', 'study')->where('rules_version', '>=', 4)->whereNotNull('completed_at')->withMax('answers', 'id')->orderBy('answers_max_id')->get();
         foreach ($sessions as $session) {
             foreach ($session->questions as $q) {
                 if (($q['mastery_applied'] ?? false) !== true) {

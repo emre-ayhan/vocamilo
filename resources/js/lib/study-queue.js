@@ -2,9 +2,11 @@
 export function createStudyQueue(questions) {
     return questions.map(question => ({ ...question, attempt_no: 1, occurrence_id: `${question.id}:1` }));
 }
-export function appendStudyRepeat(queue, occurrence, correct, firstWrong, rulesVersion = 3) {
+export function appendStudyRepeat(queue, occurrence, correct, firstWrong, rulesVersion = 3, mode = 'study', skipped = false) {
+    if(skipped)return queue;
+    const studyRules=rulesVersion>=4&&mode!=='test';
     const correctCount=(occurrence.correct_count??0)+(correct?1:0);
-    const repeat = rulesVersion >= 4
+    const repeat = studyRules
         ? correctCount < 2 && occurrence.attempt_no < 3
         : rulesVersion === 2
           ? (occurrence.attempt_no === 1 ? !correct : firstWrong && (occurrence.attempt_no < 3 || !correct))
@@ -12,10 +14,10 @@ export function appendStudyRepeat(queue, occurrence, correct, firstWrong, rulesV
     if (!repeat) return queue;
     const attempt = occurrence.attempt_no + 1;
     // Append after all remaining questions to space repeats whenever possible.
-    return [...queue, { ...occurrence, ...(rulesVersion>=4?{correct_count:correctCount,type:occurrence.retry_type??occurrence.type}:{}), attempt_no: attempt, occurrence_id: `${occurrence.id}:${attempt}` }];
+    return [...queue, { ...occurrence, ...(studyRules?{correct_count:correctCount,type:occurrence.retry_type??occurrence.type}:{}), attempt_no: attempt, occurrence_id: `${occurrence.id}:${attempt}` }];
 }
-export function studyAttemptPayload(attempts) {
-    return attempts.map(({id,answer,self_assessed,attempt_no}) => ({word_id:id,answer,self_assessed:!!self_assessed,attempt_no}));
+export function studyAttemptPayload(attempts,rulesVersion=3) {
+    return attempts.map(({id,answer,self_assessed,attempt_no,had_error,skipped}) => ({word_id:id,answer,self_assessed:!!self_assessed,attempt_no,...(rulesVersion>=5?{had_error:!!had_error,skipped:!!skipped}:{})}));
 }
 export function prioritizeGuestWords(words, learned) {
     return [...words].sort((a,b)=>Number(learned.has(a.id))-Number(learned.has(b.id)));
