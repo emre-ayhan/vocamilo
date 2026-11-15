@@ -128,7 +128,7 @@ class CollectionMembershipTest extends TestCase
         $this->get('/collections/'.$c->id.'/study')->assertInertia(fn (Assert $p) => $p->where('words.0.note', 'MEMBER SECRET'))->assertDontSee('OWNER SECRET');
         $this->assertSame('OWNER SECRET', $word->fresh()->note);
         $start = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study', 'settings' => ['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 1]])->assertCreated()->json();
-        $this->postJson('/collections/'.$c->id.'/sessions/'.$start['id'].'/complete', ['answers' => [['word_id' => $word->id, 'answer' => 'Bright', 'attempt_no' => 1]]])->assertOk();
+        $this->postJson('/collections/'.$c->id.'/sessions/'.$start['id'].'/complete', ['answers' => [['word_id' => $word->id, 'answer' => 'Bright', 'attempt_no' => 1], ['word_id' => $word->id, 'answer' => 'Bright', 'attempt_no' => 2]]])->assertOk();
         $this->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->where('summary.total_sessions', 1));
         foreach ([$owner, $other] as $viewer) {
             $this->actingAs($viewer)->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->where('summary.total_sessions', 0))->assertDontSee('MEMBER SECRET');

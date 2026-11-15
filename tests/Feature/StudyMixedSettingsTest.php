@@ -46,6 +46,7 @@ class StudyMixedSettingsTest extends TestCase
         }
         $this->assertSame($settings['types'], StudySession::findOrFail($s['id'])->settings['types']);
         $answers = $q->map(fn ($q) => ['word_id' => $q['id'], 'attempt_no' => 1, 'answer' => $q['expected']])->all();
+        $answers = array_merge($answers, array_map(fn ($a) => [...$a, 'attempt_no' => 2], $answers));
         $this->postJson('/collections/'.$c->id.'/sessions/'.$s['id'].'/complete', ['answers' => $answers])->assertOk()->assertJsonPath('session.correct', 9);
     }
 
@@ -76,11 +77,11 @@ class StudyMixedSettingsTest extends TestCase
         $this->assertDatabaseCount('study_sessions', 0);
     }
 
-    public function test_choice_falls_back_to_written_when_no_distinct_distractor(): void
+    public function test_choice_only_study_does_not_introduce_unselected_written_type(): void
     {
         [, $c] = $this->fixture(1);
         $s = $this->start($c, ['types' => ['choice'], 'directions' => ['definition']])->assertCreated()->json();
-        $this->assertSame('written', $s['questions'][0]['type']);
+        $this->assertSame('choice', $s['questions'][0]['type']);
     }
 
     public function test_unknown_priority_survives_mixed_assignment(): void
@@ -88,6 +89,7 @@ class StudyMixedSettingsTest extends TestCase
         [, $c] = $this->fixture(3);
         $old = $this->start($c)->assertCreated()->json();
         $answers = array_map(fn ($q) => ['word_id' => $q['id'], 'attempt_no' => 1, 'answer' => $q['expected']], $old['questions']);
+        $answers = array_merge($answers, array_map(fn ($a) => [...$a, 'attempt_no' => 2], $answers));
         $this->postJson('/collections/'.$c->id.'/sessions/'.$old['id'].'/complete', ['answers' => $answers])->assertOk();
         $u = $c->user;
         $new = $u->words()->create(['term' => 'new', 'definition' => 'new definition']);

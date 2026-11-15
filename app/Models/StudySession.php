@@ -15,7 +15,7 @@ class StudySession extends Model
 
     protected function casts(): array
     {
-        return ['settings' => 'array', 'questions' => 'array', 'practice_round' => 'boolean', 'completed_at' => 'datetime'];
+        return ['rules_version' => 'integer', 'settings' => 'array', 'questions' => 'array', 'practice_round' => 'boolean', 'completed_at' => 'datetime'];
     }
 
     public function answers()

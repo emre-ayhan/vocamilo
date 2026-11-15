@@ -36,11 +36,11 @@ class StudyRetryTest extends TestCase
     {
         $session = $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode, 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 3], $settings)])->assertCreated()->json();
         if ($mode === 'study') {
-            $this->assertSame(3, $session['rules_version']);
+            $this->assertSame(4, $session['rules_version']);
             // Existing v2 regression scenarios represent already-open sessions.
-            if ($version === 2) {
-                StudySession::findOrFail($session['id'])->update(['rules_version' => 2]);
-                $session['rules_version'] = 2;
+            if ($version < 4) {
+                StudySession::findOrFail($session['id'])->update(['rules_version' => $version]);
+                $session['rules_version'] = $version;
             }
         }
 
@@ -215,7 +215,7 @@ class StudyRetryTest extends TestCase
         $session->answers()->create(['word_id' => $word->id, 'position' => 0, 'attempt_no' => 1, 'prompt' => $word->definition, 'expected' => $word->term, 'answer' => $correct ? $word->term : 'wrong', 'correct' => $correct, 'self_assessed' => false]);
     }
 
-    public function test_latest_first_attempt_prioritizes_unknown_and_unseen_then_known_fills_count(): void
+    public function test_legacy_first_attempt_history_does_not_manufacture_v4_mastery(): void
     {
         [$user, $c, $words] = $this->fixture(4);
         $this->history($user, $c, $words[0], true);
@@ -223,22 +223,21 @@ class StudyRetryTest extends TestCase
         $this->history($user, $c, $words[1], false, 1);
         $this->history($user, $c, $words[3], false, 5);
         $this->history($user, $c, $words[3], true, 1);
-        $this->assertSame([$words[1]->id, $words[2]->id, $words[0]->id], array_column($this->start($c)['questions'], 'id'));
-        $this->assertSame([$words[1]->id, $words[2]->id], array_column($this->start($c, 'study', ['count' => 2])['questions'], 'id'));
+        $this->assertSame($words->take(3)->pluck('id')->all(), array_column($this->start($c)['questions'], 'id'));
+        $this->assertSame($words->take(2)->pluck('id')->all(), array_column($this->start($c, 'study', ['count' => 2])['questions'], 'id'));
         $random = array_column($this->start($c, 'study', ['order' => 'random', 'count' => 4])['questions'], 'id');
-        $this->assertEqualsCanonicalizing([$words[1]->id, $words[2]->id], array_slice($random, 0, 2));
-        $this->assertEqualsCanonicalizing([$words[0]->id, $words[3]->id], array_slice($random, 2));
+        $this->assertEqualsCanonicalizing($words->pluck('id')->all(), $random);
         $this->assertSame($words->take(3)->pluck('id')->all(), array_column($this->start($c, 'test')['questions'], 'id'));
         $this->assertSame($words->take(3)->pluck('id')->all(), array_column($this->start($c, 'flashcards')['questions'], 'id'));
     }
 
-    public function test_correct_retries_do_not_override_first_wrong_priority(): void
+    public function test_legacy_retries_preserve_first_attempt_score_without_creating_v4_mastery(): void
     {
         [, $c] = $this->fixture(3);
         $session = $this->start($c);
         [$a, $b, $d] = $session['questions'];
         $this->finish($c, $session, [$this->answer($a), $this->answer($b, 1, 'wrong'), $this->answer($d), $this->answer($b, 2), $this->answer($b, 3)])->assertOk();
-        $this->assertSame($b['id'], $this->start($c, 'study', ['count' => 1])['questions'][0]['id']);
+        $this->assertSame($a['id'], $this->start($c, 'study', ['count' => 1])['questions'][0]['id']);
         $this->travel(1)->minutes();
         $latest = $this->start($c, 'study', ['count' => 1]);
         $this->finish($c, $latest, [$this->answer($latest['questions'][0])])->assertOk();
@@ -261,9 +260,9 @@ class StudyRetryTest extends TestCase
         $s = $this->start($c);
         $this->assertSame($words->pluck('id')->all(), array_column($s['questions'], 'id'));
         $this->history($member, $c, $words[1], true);
-        $this->assertSame([$words[0]->id, $words[2]->id, $words[1]->id], array_column($this->start($c)['questions'], 'id'));
+        $this->assertSame($words->pluck('id')->all(), array_column($this->start($c)['questions'], 'id'));
         $this->actingAs($owner);
-        $this->assertSame([$words[1]->id, $words[2]->id, $words[0]->id], array_column($this->start($c)['questions'], 'id'));
+        $this->assertSame($words->take(3)->pluck('id')->all(), array_column($this->start($c)['questions'], 'id'));
         $this->finish($c, $s, array_map(fn ($q) => $this->answer($q), $s['questions']))->assertNotFound();
         $count = StudySession::count();
         $this->post('/logout');

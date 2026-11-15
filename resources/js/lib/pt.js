@@ -558,5 +558,14 @@ export default {
 "Left to right (LTR)":"Da esquerda para a direita (LTR)",
 "Right to left (RTL)":"Da direita para a esquerda (RTL)",
 "Keep me signed in with Google":"Manter a sessão iniciada com o Google",
-"This choice applies to Google and password sign-in.":"Esta escolha aplica-se ao início de sessão com Google e com palavra-passe."
+"This choice applies to Google and password sign-in.":"Esta escolha aplica-se ao início de sessão com Google e com palavra-passe.",
+"Reinforced":"Reforçado",
+"Learning":"Em aprendizagem",
+"Needs practice":"Precisa de prática",
+"Learning stages":"Etapas de aprendizagem",
+"Study revisits each word later in this session. Two correct answers build Learning; a later completed session with two correct answers and no mistakes builds Reinforced. Each word has at most three attempts. With only one word, its repeat appears immediately.":"O Estudo repete cada palavra mais tarde nesta sessão. Duas respostas corretas levam a Em aprendizagem; uma sessão posterior concluída com duas respostas corretas e sem erros leva a Reforçado. Cada palavra tem no máximo três tentativas. Com apenas uma palavra, a repetição aparece imediatamente.",
+"First-attempt percentages stay separate from learning stages. A mistake prevents reinforcement in this round; two correct answers can still build Learning.":"As percentagens da primeira tentativa são separadas das etapas de aprendizagem. Um erro impede o reforço nesta ronda; duas respostas corretas ainda permitem chegar a Em aprendizagem.",
+"Guest stages exist only on this open page. They are not saved to an account or shared with the owner.":"As etapas de visitantes existem apenas nesta página aberta. Não são guardadas numa conta nem partilhadas com o proprietário.",
+"Another completed session updated some stages first. These are the current saved stages.":"Outra sessão concluída atualizou algumas etapas primeiro. Estas são as etapas guardadas atualmente.",
+"Only one answer is available. Add distinct words for a meaningful multiple-choice challenge.":"Só está disponível uma resposta. Adicione palavras distintas para um desafio de escolha múltipla significativo."
 };

@@ -37,6 +37,9 @@ class StudyDirectionTest extends TestCase
             $session = StudySession::findOrFail($response->json('id'));
             $this->assertSame($questions[0]['text_direction'], $session->questions[0]['text_direction']);
             $answers = array_map(fn ($q) => $mode === 'flashcards' ? ['word_id' => $q['id'], 'known' => true] : ['word_id' => $q['id'], 'attempt_no' => 1, 'answer' => $q['expected']], $questions);
+            if ($mode === 'study') {
+                $answers = array_merge($answers, array_map(fn ($a) => [...$a, 'attempt_no' => 2], $answers));
+            }
             $done = $this->postJson('/collections/'.$collection->id.'/sessions/'.$session->id.'/complete', ['answers' => $answers])->assertOk()->assertJsonPath('session.correct', 3);
             $this->assertSame($questions[0]['text_direction'], $done->json('results.0.text_direction'));
             $this->assertSame($questions[0]['option_directions'], $done->json('results.0.option_directions'));

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Collection;
 use App\Models\StudySession;
 use App\Models\Word;
+use App\Support\StudyMastery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,6 +21,17 @@ class StudySessionController extends Controller
     }
 
     public function store(Request $r, int $collection)
+    {
+        $c = Collection::accessibleTo($r->user()->id, $collection);
+
+        return DB::transaction(function () use ($r, $c) {
+            Collection::whereKey($c->id)->lockForUpdate()->firstOrFail();
+
+            return $this->start($r, $c->id);
+        });
+    }
+
+    private function start(Request $r, int $collection)
     {
         $c = Collection::accessibleTo($r->user()->id, $collection);
         $d = $r->validate([
@@ -45,15 +57,17 @@ class StudySessionController extends Controller
         abort_if($words->isEmpty(), 422, 'Add words before starting a session.');
         $settings = $d['settings'];
         $ordered = $settings['order'] === 'random' ? $words->shuffle() : $words;
+        $mastery = [];
         if ($d['mode'] === 'study') {
-            $history = DB::table('study_answers as a')->join('study_sessions as s', 's.id', '=', 'a.study_session_id')->where('s.collection_id', $c->id)->where('s.user_id', $r->user()->id)->where('s.mode', 'study')->whereNotNull('s.completed_at')->where('a.attempt_no', 1)->whereNotNull('a.word_id')->orderByDesc('s.completed_at')->orderByDesc('a.id')->get(['a.word_id', 'a.correct']);
-            $known = [];
-            foreach ($history as $row) {
-                if (! array_key_exists($row->word_id, $known)) {
-                    $known[$row->word_id] = (bool) $row->correct;
-                }
-            }
-            $ordered = $ordered->filter(fn ($w) => ! ($known[$w->id] ?? false))->concat($ordered->filter(fn ($w) => $known[$w->id] ?? false))->values();
+            $mastery = StudyMastery::forLearner($c->id, $r->user()->id);
+            $count = min($settings['count'], $ordered->count());
+            $review = $ordered->filter(fn ($w) => ($mastery[$w->id]['stage'] ?? 'new') === 'reinforced')->sortBy(fn ($w) => [$mastery[$w->id]['reviewed_at'], $mastery[$w->id]['sequence']])->values();
+            $learning = $ordered->reject(fn ($w) => ($mastery[$w->id]['stage'] ?? 'new') === 'reinforced')->sortBy(fn ($w) => (int) ($mastery[$w->id]['qualified'] ?? false))->values();
+            $number = StudySession::where('collection_id', $c->id)->where('user_id', $r->user()->id)->where('mode', 'study')->where('rules_version', 4)->whereNotNull('completed_at')->count() + 1;
+            $quota = $count >= 2 ? max(1, (int) round($count * .2)) : ($number % 5 === 0 ? 1 : 0);
+            $reserved = min($quota, $review->count());
+            $selectedLearning = $learning->take($count - $reserved);
+            $ordered = $selectedLearning->concat($review->take($count - $selectedLearning->count()))->values();
         }
         $directions = in_array($d['mode'], ['study', 'test'], true) ? ($settings['directions'] ?? [$settings['direction']]) : [$settings['direction']];
         $types = in_array($d['mode'], ['study', 'test'], true) ? ($settings['types'] ?? [$settings['type']]) : [$settings['type']];
@@ -64,7 +78,7 @@ class StudySessionController extends Controller
             }
         }
         $cycle = collect();
-        $questions = $ordered->take($settings['count'])->values()->map(function ($w, $index) use ($words, $combinations, &$cycle) {
+        $questions = $ordered->take($settings['count'])->values()->map(function ($w, $index) use ($words, $combinations, &$cycle, $mastery, $types, $d) {
             // Shuffle each complete cycle: selected combinations differ in frequency by at most one.
             if ($index % count($combinations) === 0) {
                 $cycle = collect($combinations)->shuffle();
@@ -73,13 +87,15 @@ class StudySessionController extends Controller
             $answerKey = $variant['direction'];
             $promptKey = $answerKey === 'term' ? 'definition' : 'term';
             $others = $words->unique(fn ($candidate) => self::normalize($candidate->$answerKey))->filter(fn ($candidate) => self::normalize($candidate->$answerKey) !== self::normalize($w->$answerKey))->shuffle()->take(3);
-            $type = $variant['type'] === 'choice' && $others->isNotEmpty() ? 'choice' : 'written';
+            $type = $variant['type'] === 'choice' && ($others->isNotEmpty() || $d['mode'] === 'study') ? 'choice' : 'written';
             $choices = $others->push($w)->shuffle()->values();
 
             // Snapshot presentation separately from scoring; each distractor may use another writing direction.
-            return ['id' => $w->id, 'text_direction' => $w->text_direction ?? 'ltr', 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $type, 'options' => $choices->map(fn ($candidate) => $candidate->$answerKey)->all(), 'option_directions' => $choices->map(fn ($candidate) => $candidate->text_direction ?? 'ltr')->all()];
+            $extra = $d['mode'] === 'study' ? ['prior_stage' => $mastery[$w->id]['stage'] ?? 'new', 'prior_qualified' => $mastery[$w->id]['qualified'] ?? false, 'prior_baseline' => $mastery[$w->id]['baseline'] ?? null, 'retry_type' => in_array('written', $types, true) ? 'written' : $type] : [];
+
+            return $extra + ['id' => $w->id, 'text_direction' => $w->text_direction ?? 'ltr', 'prompt' => $w->$promptKey, 'expected' => $w->$answerKey, 'answerKey' => $answerKey, 'type' => $type, 'options' => $choices->map(fn ($candidate) => $candidate->$answerKey)->all(), 'option_directions' => $choices->map(fn ($candidate) => $candidate->text_direction ?? 'ltr')->all()];
         })->values()->all();
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => in_array($d['mode'], ['study', 'test'], true) ? 3 : 1]);
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 4 : ($d['mode'] === 'test' ? 3 : 1)]);
         // Notes may be displayed privately, but are not copied into historical data.
         $notes = $c->user_id === $r->user()->id ? $words->pluck('note', 'id') : DB::table('user_word_notes')->where('user_id', $r->user()->id)->pluck('note', 'word_id');
         $display = array_map(fn ($q) => $q + ['note' => $notes[$q['id']] ?? null], $questions);
@@ -148,6 +164,8 @@ class StudySessionController extends Controller
         $d = $r->validate(['answers' => 'required|array|min:1|max:20000', 'answers.*' => 'required|array:word_id,attempt_no,answer,self_assessed', 'answers.*.word_id' => 'required|integer', 'answers.*.attempt_no' => 'required|integer|min:1', 'answers.*.answer' => 'required|string|max:5000', 'answers.*.self_assessed' => 'sometimes|boolean']);
         $queue = array_keys($s->questions);
         $attempts = [];
+        $rightCounts = [];
+        $wrongCounts = [];
         $correct = 0;
         $assessed = 0;
         $existing = Word::whereIn('id', array_column($s->questions, 'id'))->pluck('id')->all();
@@ -162,6 +180,9 @@ class StudySessionController extends Controller
                 throw ValidationException::withMessages(['answers' => __('Follow the session question and retry order.')]);
             }
             $attempts[$qi] = $number;
+            if ($s->mode === 'study' && $s->rules_version === 4 && $number > 1) {
+                $q['type'] = $q['retry_type'];
+            }
             $self = (bool) ($a['self_assessed'] ?? false);
             if ($self && ! ($s->mode === 'study' && $q['type'] === 'written' && $q['answerKey'] === 'definition')) {
                 throw ValidationException::withMessages(['answers' => __('Self assessment is allowed only for written definitions in Study.')]);
@@ -177,11 +198,13 @@ class StudySessionController extends Controller
                 $correct += (int) $right;
                 $assessed += (int) $self;
             }
-            // v3 caps practice at two extra tries, stopping as soon as an answer is correct.
-            // Keep v2 validation for sessions opened before this rollout.
-            $retry = $s->rules_version >= 3
-                ? (! $right && $number < 3)
-                : (($number === 1 && ! $right) || $number === 2 || ($number >= 3 && ! $right));
+            $rightCounts[$qi] = ($rightCounts[$qi] ?? 0) + (int) $right;
+            $wrongCounts[$qi] = ($wrongCounts[$qi] ?? 0) + (int) ! $right;
+            // V4 repeats even initially correct words, but caps every word at three presentations.
+            $retry = $s->mode === 'study' && $s->rules_version === 4
+                ? ($rightCounts[$qi] < 2 && $number < 3)
+                : ($s->rules_version >= 3 ? (! $right && $number < 3)
+                : (($number === 1 && ! $right) || $number === 2 || ($number >= 3 && ! $right)));
             if ($retry) {
                 $queue[] = $qi;
             }
@@ -189,6 +212,22 @@ class StudySessionController extends Controller
         }
         if (count($d['answers']) !== count($queue)) {
             throw ValidationException::withMessages(['answers' => __('Finish all questions and required retries before saving.')]);
+        }
+        if ($s->mode === 'study' && $s->rules_version === 4) {
+            $current = StudyMastery::forLearner($s->collection_id, $s->user_id);
+            $questions = $s->questions;
+            $attached = Collection::findOrFail($s->collection_id)->words()->pluck('words.id')->all();
+            foreach ($questions as $qi => &$q) {
+                $state = $current[$q['id']] ?? ['stage' => 'new', 'qualified' => false, 'baseline' => null];
+                $fresh = ($q['prior_baseline'] ?? null) === $state['baseline'] && in_array($q['id'], $attached, true);
+                $qualified = ($rightCounts[$qi] ?? 0) >= 2;
+                $reinforced = $qualified && ($q['prior_qualified'] ?? false) && ($wrongCounts[$qi] ?? 0) === 0;
+                $q['mastery_applied'] = $fresh;
+                $q['mastery_stage'] = $fresh ? ($reinforced ? 'reinforced' : 'learning') : $state['stage'];
+                $q['mastery_qualified'] = $fresh ? $qualified : $state['qualified'];
+            }
+            unset($q);
+            $s->questions = $questions;
         }
         $s->update(['correct_count' => $correct, 'self_assessed_count' => $assessed, 'completed_at' => now(), 'total_attempts' => count($d['answers'])]);
 
@@ -200,9 +239,14 @@ class StudySessionController extends Controller
         $answers = $s->answers()->orderBy('position')->get();
 
         $results = $answers->map(function ($a) use ($s) {
-            return $s->questions[$a->question_index ?? $a->position] + ['attempt_no' => $a->attempt_no, 'first_attempt' => $a->attempt_no === 1, 'answer' => $a->answer ?? '', 'correct' => $a->correct, 'self_assessed' => $a->self_assessed];
+            $q = $s->questions[$a->question_index ?? $a->position];
+            if ($s->mode === 'study' && $s->rules_version === 4 && $a->attempt_no > 1) {
+                $q['type'] = $q['retry_type'];
+            }
+
+            return $q + ['attempt_no' => $a->attempt_no, 'first_attempt' => $a->attempt_no === 1, 'answer' => $a->answer ?? '', 'correct' => $a->correct, 'self_assessed' => $a->self_assessed];
         })->all();
 
-        return ['session' => $s->result(), 'results' => $results, 'first_results' => array_values(array_filter($results, fn ($r) => $r['first_attempt']))];
+        return ['mastery' => $s->mode === 'study' && $s->rules_version === 4 ? array_map(fn ($q) => ['word_id' => $q['id'], 'stage' => $q['mastery_stage'], 'qualified' => $q['mastery_qualified'], 'applied' => $q['mastery_applied']], $s->questions) : [], 'session' => $s->result(), 'results' => $results, 'first_results' => array_values(array_filter($results, fn ($r) => $r['first_attempt']))];
     }
 }
