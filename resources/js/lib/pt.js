@@ -556,5 +556,7 @@ export default {
 "\u2190 Back to pool":"← Voltar ao grupo",
 "Text direction":"Direção do texto",
 "Left to right (LTR)":"Da esquerda para a direita (LTR)",
-"Right to left (RTL)":"Da direita para a esquerda (RTL)"
+"Right to left (RTL)":"Da direita para a esquerda (RTL)",
+"Keep me signed in with Google":"Manter a sessão iniciada com o Google",
+"This choice applies to Google and password sign-in.":"Esta escolha aplica-se ao início de sessão com Google e com palavra-passe."
 };
