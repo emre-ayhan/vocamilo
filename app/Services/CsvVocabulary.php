@@ -6,7 +6,7 @@ use Illuminate\Validation\ValidationException;
 
 class CsvVocabulary
 {
-    public function parse(string $path, int $termColumn = 0, int $definitionColumn = 1, bool $header = true): array
+    public function parse(string $path, int $termColumn = 0, int $definitionColumn = 1, bool $header = true, ?int $noteColumn = 2): array
     {
         $h = fopen($path, 'r');
         $rows = [];
@@ -30,7 +30,15 @@ class CsvVocabulary
                 if (! mb_check_encoding($term.$definition, 'UTF-8') || $term === '' || $definition === '' || mb_strlen($term) > 500 || mb_strlen($definition) > 5000) {
                     throw ValidationException::withMessages(['file' => __('Invalid term or definition on CSV row :row. Use UTF-8, with nonempty term and definition columns.', ['row' => $line])]);
                 }
-                $rows[] = ['term' => $term, 'definition' => $definition];
+                $note = $noteColumn === null ? '' : ($row[$noteColumn] ?? '');
+                if (! mb_check_encoding($note, 'UTF-8')) {
+                    throw ValidationException::withMessages(['file' => __('Invalid personal note on CSV row :row. Use UTF-8 and at most 5,000 characters.', ['row' => $line])]);
+                }
+                $note = preg_replace('/^\s+|\s+$/u', '', $note);
+                if (mb_strlen($note) > 5000) {
+                    throw ValidationException::withMessages(['file' => __('Invalid personal note on CSV row :row. Use UTF-8 and at most 5,000 characters.', ['row' => $line])]);
+                }
+                $rows[] = ['term' => $term, 'definition' => $definition] + ($note !== '' ? ['note' => $note] : []);
                 if (count($rows) > 2000) {
                     throw ValidationException::withMessages(['file' => __('Import up to 2,000 words at a time.')]);
                 }

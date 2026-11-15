@@ -91,7 +91,7 @@ class CsvUpdateTest extends TestCase
         }
     }
 
-    public function test_note_only_changes_are_preserved_and_unchanged_word_can_join_target_collection(): void
+    public function test_note_changes_after_preview_reject_until_repreview_then_preserve_note(): void
     {
         $u = User::factory()->create();
         $this->actingAs($u);
@@ -99,6 +99,9 @@ class CsvUpdateTest extends TestCase
         $c = $u->collections()->create(['title' => 'Target']);
         $this->preview("word,meaning\n")->assertInertia(fn (Assert $p) => $p->where('preview.skipped', 1)->where('preview.total', 1));
         $w->update(['note' => 'fresh note']);
+        $this->postJson('/imports/store', ['preview_id' => session('csv_preview.preview_id'), 'collection_id' => $c->id])->assertUnprocessable();
+        $this->assertSame(0, $c->words()->count());
+        $this->preview("word,meaning\n");
         $this->post('/imports/store', ['preview_id' => session('csv_preview.preview_id'), 'collection_id' => $c->id])->assertRedirect();
         $this->assertSame('fresh note', $w->fresh()->note);
         $this->assertSame($w->id, $c->words()->first()->id);

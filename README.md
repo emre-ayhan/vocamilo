@@ -250,3 +250,9 @@ Guest stages exist only in the current page's memory and advance only after a wh
 Collection word lists show 15 words per page, newest collection additions first with a stable word-ID tie-breaker. First, Previous, Next and Last controls replace Load more; Study, Test and Flashcards still use the complete collection. The page is carried in `words_page`, independently of the owner's pool-selection filters. Removing a word from a collection preserves the current page, clamped to the new last page if necessary; it does not delete the original pool word. Empty collections remain on page 1. Owner, joined-member and public lists retain their existing access and private-note rules.
 
 This pagination update requires no migration. Pull the code, run `npm run build`, and clear Laravel caches with `php artisan optimize:clear`.
+
+### Optional CSV personal notes
+
+Imports accept an optional third column containing the importing account's personal word note. Two-column files still work. A nonblank mapped note creates or updates that owner's note; a missing or blank note leaves an existing note unchanged. Notes are not translated and do not replace another member's separate private note. They follow the existing word identity across the owner's pools and collections, without becoming visible in public/shared word data.
+
+Preview identifies note-only updates as changes. Conflicting nonblank notes for repeated copies of a term are skipped with a warning rather than choosing one silently; blank copies and one unique nonblank note can be combined. UTF-8 and the existing 5,000-character note limit apply. A note edited after preview invalidates the preview, just like other word changes. The preview version changes, so files previewed before this release must be uploaded again; this does not modify saved words. No database migration is required.

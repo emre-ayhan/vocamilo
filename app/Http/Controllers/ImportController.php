@@ -23,8 +23,9 @@ class ImportController extends Controller
     public function preview(Request $r, CsvVocabulary $csv)
     {
         $r->session()->forget('csv_preview');
-        $d = $r->validate(['pool_id' => 'required|integer', 'file' => 'required|file|max:2048', 'term_column' => 'nullable|integer|min:0|max:49', 'definition_column' => 'nullable|integer|min:0|max:49', 'has_header' => 'nullable|boolean']);
-        $parsed = $csv->parse($r->file('file')->getRealPath(), (int) ($d['term_column'] ?? 0), (int) ($d['definition_column'] ?? 1), $r->boolean('has_header', true));
+        $d = $r->validate(['pool_id' => 'required|integer', 'file' => 'required|file|max:2048', 'term_column' => 'nullable|integer|min:0|max:49', 'definition_column' => 'nullable|integer|min:0|max:49', 'has_header' => 'nullable|boolean', 'note_column' => 'sometimes|nullable|integer|min:0|max:49']);
+        $noteColumn = array_key_exists('note_column', $d) ? ($d['note_column'] === null ? null : (int) $d['note_column']) : 2;
+        $parsed = $csv->parse($r->file('file')->getRealPath(), (int) ($d['term_column'] ?? 0), (int) ($d['definition_column'] ?? 1), $r->boolean('has_header', true), $noteColumn);
         [$target, $snapshot] = DB::transaction(function () use ($r, $d) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
             $target = $r->user()->wordPools()->findOrFail($d['pool_id']);
@@ -47,6 +48,14 @@ class ImportController extends Controller
 
                 continue;
             }
+            $notes = $group->pluck('note')->filter(fn ($note) => $note !== null && $note !== '')->uniqueStrict()->values();
+            if ($notes->count() > 1) {
+                $skipped += $group->count();
+                $warnings[] = ['term' => $row['term'], 'message' => __('Conflicting personal notes for this term in the CSV. All its rows were skipped.')];
+
+                continue;
+            }
+            $row['note'] = $notes->first();
             $matches = $pool->get($key, collect());
             if ($matches->count() > 1) {
                 $skipped += $group->count();
@@ -57,7 +66,7 @@ class ImportController extends Controller
             $duplicates += $group->count() - 1;
             $skipped += $group->count() - 1;
             $word = $matches->first();
-            $action = ! $word ? 'create' : ($word['definition'] === $row['definition'] ? 'unchanged' : 'update');
+            $action = ! $word ? 'create' : ($word['definition'] === $row['definition'] && ($row['note'] === null || $word['note'] === $row['note']) ? 'unchanged' : 'update');
             if ($action === 'create') {
                 $created++;
             } elseif ($action === 'update') {
@@ -69,8 +78,8 @@ class ImportController extends Controller
             $rows[] = $row + ['key' => $key, 'action' => $action, 'snapshot' => $word ?: null];
         }
         $previewId = (string) Str::uuid();
-        $r->session()->put('csv_preview', ['preview_id' => $previewId, 'version' => 3, 'pool_id' => $target->id, 'pool_snapshot' => $target->only('id', 'name', 'language', 'text_direction'), 'membership_hash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)), 'user_id' => $r->user()->id, 'rows' => $rows, 'expires_at' => now()->addMinutes(30)->timestamp]);
-        $display = array_map(fn ($row) => collect($row)->only('term', 'definition', 'action')->all(), array_slice($rows, 0, 50));
+        $r->session()->put('csv_preview', ['preview_id' => $previewId, 'version' => 4, 'pool_id' => $target->id, 'pool_snapshot' => $target->only('id', 'name', 'language', 'text_direction'), 'membership_hash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)), 'user_id' => $r->user()->id, 'rows' => $rows, 'expires_at' => now()->addMinutes(30)->timestamp]);
+        $display = array_map(fn ($row) => collect($row)->only('term', 'definition', 'note', 'action')->all(), array_slice($rows, 0, 50));
 
         return Inertia::render('Import/Index', ['selectedPoolId' => $target->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language', 'text_direction']), 'preview' => ['preview_id' => $previewId, 'pool_id' => $target->id, 'rows' => $display, 'total' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'duplicates' => $duplicates, 'warnings' => $warnings, 'headers' => $parsed['headers']], 'collections' => $r->user()->collections()->get(['id', 'title'])]);
     }
@@ -82,14 +91,14 @@ class ImportController extends Controller
 
     private function snapshot($pool, int $userId): array
     {
-        return $pool->words()->where('words.user_id', $userId)->reorder()->orderBy('words.id')->get(['words.id', 'words.term', 'words.definition', 'words.text_direction'])->map(fn ($word) => $word->only('id', 'term', 'definition', 'text_direction'))->all();
+        return $pool->words()->where('words.user_id', $userId)->reorder()->orderBy('words.id')->get(['words.id', 'words.term', 'words.definition', 'words.text_direction', 'words.note'])->map(fn ($word) => $word->only('id', 'term', 'definition', 'text_direction', 'note'))->all();
     }
 
     public function store(Request $r)
     {
         $d = $r->validate(['pool_id' => 'nullable|integer', 'collection_id' => 'nullable|integer']);
         $preview = $r->session()->get('csv_preview');
-        abort_unless($preview && ($preview['version'] ?? null) === 3 && $preview['user_id'] === $r->user()->id && $preview['expires_at'] >= time(), 422, __('Preview expired. Upload the CSV again.'));
+        abort_unless($preview && ($preview['version'] ?? null) === 4 && $preview['user_id'] === $r->user()->id && $preview['expires_at'] >= time(), 422, __('Preview expired. Upload the CSV again.'));
         $r->validate(['preview_id' => 'required|uuid']);
         if (! is_string($preview['preview_id'] ?? null) || ! hash_equals($preview['preview_id'], $r->input('preview_id'))) {
             throw ValidationException::withMessages(['file' => __('This preview was replaced. Upload the CSV again.')]);
@@ -110,12 +119,12 @@ class ImportController extends Controller
             }
             foreach ($preview['rows'] as $row) {
                 if ($row['snapshot'] === null) {
-                    $word = $r->user()->words()->create(['term' => $row['term'], 'definition' => $row['definition'], 'text_direction' => $target->text_direction]);
+                    $word = $r->user()->words()->create(['term' => $row['term'], 'definition' => $row['definition'], 'text_direction' => $target->text_direction, 'note' => $row['note']]);
                     $target->words()->attach($word->id);
                 } else {
                     $word = $pool->get($row['snapshot']['id']);
                     if ($row['action'] === 'update') {
-                        $word->update(['definition' => $row['definition']]);
+                        $word->update(['definition' => $row['definition']] + ($row['note'] !== null ? ['note' => $row['note']] : []));
                     }
                 }
                 if ($c && ! $c->words()->where('words.id', $word->id)->exists()) {

@@ -453,5 +453,7 @@
   "This account is suspended.": "Esta conta está suspensa.",
   "The selected pool changed. Upload the CSV again.": "O conjunto selecionado mudou. Carregue novamente o CSV.",
   "This preview was replaced. Upload the CSV again.": "Esta pré-visualização foi substituída. Carregue novamente o CSV.",
-    "Words shared with another pool must use the same text direction.": "As palavras partilhadas com outro conjunto devem usar a mesma direção do texto."
+    "Words shared with another pool must use the same text direction.": "As palavras partilhadas com outro conjunto devem usar a mesma direção do texto.",
+    "Invalid personal note on CSV row :row. Use UTF-8 and at most 5,000 characters.": "Nota pessoal inválida na linha :row do CSV. Use UTF-8 e no máximo 5.000 caracteres.",
+    "Conflicting personal notes for this term in the CSV. All its rows were skipped.": "Existem notas pessoais contraditórias para este termo no CSV. Todas as suas linhas foram ignoradas."
 }

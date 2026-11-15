@@ -571,5 +571,17 @@ export default {
 "Word pages":"Páginas de palavras",
 "Showing {from}–{to} of {total}":"A mostrar {from}–{to} de {total}",
 "First page":"Primeira página",
-"Last page":"Última página"
+"Last page":"Última página",
+"Choose a UTF-8 CSV with word and definition columns. A third personal-note column is optional; two-column files still work.":"Escolha um CSV UTF-8 com colunas de palavra e definição. A terceira coluna de nota pessoal é opcional; ficheiros com duas colunas continuam a funcionar.",
+"Personal note column (optional)":"Coluna de nota pessoal (opcional)",
+"Ignore notes":"Ignorar notas",
+"Nonempty imported notes update your personal note. Blank or missing notes keep your existing note.":"Notas importadas não vazias atualizam a sua nota pessoal. Notas vazias ou ausentes mantêm a nota existente.",
+"Two required columns.":"Duas colunas obrigatórias.",
+"One optional private note.":"Uma nota privada opcional.",
+"Imports match within the selected pool. Shared word changes affect every pool and collection using that word. Only your own private note can be updated; collection links are preserved.":"As importações procuram correspondências no grupo selecionado. Alterações às palavras partilhadas afetam os grupos e coleções que as utilizam. Só a sua nota privada pode ser atualizada; as ligações às coleções são preservadas.",
+"The file or column mapping changed. Preview again before importing.":"O ficheiro ou o mapeamento das colunas mudou. Pré-visualize novamente antes de importar.",
+"Set private note":"Definir nota privada",
+"No note":"Sem nota",
+"Keep existing note":"Manter nota existente",
+"Update word":"Atualizar palavra"
 };
