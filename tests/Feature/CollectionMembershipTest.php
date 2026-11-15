@@ -139,7 +139,7 @@ class CollectionMembershipTest extends TestCase
         $this->actingAs($member)->put('/collections/'.$c->id.'/words/'.$foreignWord->id.'/note', ['note' => 'x'])->assertNotFound();
     }
 
-    public function test_newest_fifteen_cursor_pages_cover_all_words_and_study_is_not_paginated(): void
+    public function test_newest_fifteen_numbered_pages_cover_all_words_and_study_is_not_paginated(): void
     {
         [$owner, $member, $c, $word] = $this->fixture();
         $c->members()->attach($member, ['progress_consented_at' => now(), 'progress_consent_version' => 2]);
@@ -151,13 +151,13 @@ class CollectionMembershipTest extends TestCase
         }
         $this->actingAs($member)->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->has('collection.words', 15)->where('collection.words.0.id', end($ids))->where('collection.words_count', 32));
         $all = [];
-        $cursor = null;
+        $number = 1;
         do {
-            $page = $this->getJson('/collections/'.$c->id.'/words'.($cursor ? '?cursor='.urlencode($cursor) : ''))->assertOk()->json();
+            $page = $this->getJson('/collections/'.$c->id.'/words?words_page='.$number)->assertOk()->json();
             $this->assertLessThanOrEqual(15, count($page['data']));
             $all = array_merge($all, array_column($page['data'], 'id'));
-            $cursor = $page['next_cursor'];
-        } while ($cursor);
+            $number++;
+        } while ($number <= $page['last_page']);
         $this->assertSame(array_reverse($ids), $all);
         $this->get('/collections/'.$c->id.'/study')->assertInertia(fn (Assert $p) => $p->has('words', 32));
         $this->get('/s/'.$c->share_uuid.'/study')->assertInertia(fn (Assert $p) => $p->has('words', 32));

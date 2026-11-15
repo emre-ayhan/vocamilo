@@ -149,12 +149,22 @@ class CollectionController extends Controller
 
     public function removeWord(Request $r, int $collection, int $word)
     {
-        DB::transaction(function () use ($r, $collection, $word) {
+        $this->owned($r, $collection);
+        $d = $r->validate(['words_page' => 'sometimes|integer|min:1']);
+        $poolIds = $r->has('pool_ids') ? $this->poolIds($r) : null;
+        $page = DB::transaction(function () use ($r, $collection, $word, $d) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
-            $this->owned($r, $collection)->words()->detach($word);
-        });
+            $c = $this->owned($r, $collection);
+            $c->words()->detach($word);
 
-        return back();
+            return min((int) ($d['words_page'] ?? 1), max(1, (int) ceil($c->words()->count() / 15)));
+        });
+        $query = ['words_page' => $page];
+        if ($poolIds !== null) {
+            $query['pool_ids'] = $poolIds;
+        }
+
+        return redirect('/collections/'.$collection.'?'.http_build_query($query));
     }
 
     public function share(Request $r, int $collection)
@@ -349,16 +359,20 @@ class CollectionController extends Controller
 
     private function wordPage(Collection $c, ?int $learner): array
     {
-        // Cursor uses unique word id with added_at ordering; legacy rows get a deterministic epoch.
-        $page = $c->words()->reorder()->select('words.*')->selectRaw("COALESCE(collection_word.added_at, '1970-01-01 00:00:00') as membership_added_at")->orderByDesc('membership_added_at')->orderByDesc('words.id')->cursorPaginate(15);
+        $d = request()->validate(['words_page' => 'sometimes|integer|min:1']);
+        $total = $c->words()->count();
+        $last = max(1, (int) ceil($total / 15));
+        $current = min((int) ($d['words_page'] ?? 1), $last);
+        // Keep newest-added ordering and a unique ID tie-breaker for legacy rows.
+        $words = $c->words()->reorder()->select('words.*')->selectRaw("COALESCE(collection_word.added_at, '1970-01-01 00:00:00') as membership_added_at")->orderByDesc('membership_added_at')->orderByDesc('words.id')->offset(($current - 1) * 15)->limit(15)->get();
 
-        return ['data' => $this->wordData($c, collect($page->items()), $learner), 'next_cursor' => $page->nextCursor()?->encode()];
+        return ['data' => $this->wordData($c, $words, $learner), 'current_page' => $current, 'last_page' => $last, 'per_page' => 15, 'total' => $total, 'from' => $total ? ($current - 1) * 15 + 1 : null, 'to' => $total ? min($current * 15, $total) : null];
     }
 
     private function payload(Collection $c, bool $public, ?int $learner = null, bool $paginate = false): array
     {
         $page = $paginate ? $this->wordPage($c, $learner) : null;
 
-        return ['id' => $public ? null : $c->id, 'title' => $c->title, 'description' => $c->description, 'voice_language' => $c->voice_language, 'share_uuid' => $c->share_uuid, 'words' => $paginate ? $page['data'] : $this->wordData($c, $c->words()->get(), $learner), 'words_count' => $c->words()->count(), 'next_cursor' => $page['next_cursor'] ?? null];
+        return ['id' => $public ? null : $c->id, 'title' => $c->title, 'description' => $c->description, 'voice_language' => $c->voice_language, 'share_uuid' => $c->share_uuid, 'words' => $paginate ? $page['data'] : $this->wordData($c, $c->words()->get(), $learner), 'words_count' => $c->words()->count(), 'word_pagination' => $page ? array_diff_key($page, ['data' => true]) : null];
     }
 }

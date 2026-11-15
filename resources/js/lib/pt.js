@@ -567,5 +567,9 @@ export default {
 "First-attempt percentages stay separate from learning stages. A mistake prevents reinforcement in this round; two correct answers can still build Learning.":"As percentagens da primeira tentativa são separadas das etapas de aprendizagem. Um erro impede o reforço nesta ronda; duas respostas corretas ainda permitem chegar a Em aprendizagem.",
 "Guest stages exist only on this open page. They are not saved to an account or shared with the owner.":"As etapas de visitantes existem apenas nesta página aberta. Não são guardadas numa conta nem partilhadas com o proprietário.",
 "Another completed session updated some stages first. These are the current saved stages.":"Outra sessão concluída atualizou algumas etapas primeiro. Estas são as etapas guardadas atualmente.",
-"Only one answer is available. Add distinct words for a meaningful multiple-choice challenge.":"Só está disponível uma resposta. Adicione palavras distintas para um desafio de escolha múltipla significativo."
+"Only one answer is available. Add distinct words for a meaningful multiple-choice challenge.":"Só está disponível uma resposta. Adicione palavras distintas para um desafio de escolha múltipla significativo.",
+"Word pages":"Páginas de palavras",
+"Showing {from}–{to} of {total}":"A mostrar {from}–{to} de {total}",
+"First page":"Primeira página",
+"Last page":"Última página"
 };

@@ -1,4 +1,5 @@
 <script setup>
+import {collectionWordQuery} from '../../lib/collection-word-pagination.js';
 import VocabularyText from "../../Components/VocabularyText.vue";
 import LocalVoicePicker from '../../Components/LocalVoicePicker.vue';
 import {collectionVoicePreference} from '../../lib/speech-preference.js';
@@ -18,7 +19,7 @@ const props = defineProps({
     sharing: { type: Object, default: () => ({access:'guests',participants_count:0,blocked_count:0}) },
     collection: Object, shared: { type: Boolean, default: false }, isOwner: { type: Boolean, default: false },
     pools:{type:Array,default:()=>[]},filters:{type:Object,default:()=>({pool_ids:[]})},
-    availableWords: { type: Array, default: () => [] }, next_cursor: { type: String, default: null },
+    availableWords: { type: Array, default: () => [] },
     summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) },
 });
 let storage;try{storage=window.localStorage;}catch{}
@@ -30,45 +31,31 @@ function saveVoice(){if(persistVoice(voiceDraft.value))showVoice.value=false;}
 const authenticated = computed(() => Boolean(page.props.auth?.user));
 const owner = computed(() => !props.shared && props.isOwner);
 const showAdd = ref(false), showEdit = ref(false), showNote = ref(false), query = ref(''), copyStatus = ref('');
-const visibleWords = ref([]), nextCursor = ref(null), loading = ref(false), loadError = ref(false);
-let requestController = null, generation = 0;
-watch(() => [props.collection, props.next_cursor], () => {
-    generation++; requestController?.abort(); loading.value = false; loadError.value = false;
-    visibleWords.value = [...(props.collection.words ?? [])];
-    nextCursor.value = props.collection.next_cursor ?? props.next_cursor ?? null;
-}, { immediate: true });
-onBeforeUnmount(() => requestController?.abort());
+const visibleWords=computed(()=>props.collection.words??[]);
+const wordPagination=computed(()=>props.collection.word_pagination??{current_page:1,last_page:1,total:visibleWords.value.length,from:visibleWords.value.length?1:null,to:visibleWords.value.length||null});
+const loading=ref(false),removing=ref(false),wordErrors=ref({});
+let wordVisit=0,cancelWordVisit;
+function wordVisitOptions(kind){
+ const token=++wordVisit;wordErrors.value={};kind==='remove'?removing.value=true:loading.value=true;
+ return {preserveState:true,preserveScroll:true,onCancelToken:cancel=>{if(token===wordVisit)cancelWordVisit=cancel;},onError:errors=>{if(token===wordVisit)wordErrors.value=errors;},onFinish:()=>{if(token===wordVisit){loading.value=false;removing.value=false;cancelWordVisit=null;}}};
+}
+onBeforeUnmount(()=>{wordVisit++;cancelWordVisit?.cancel();});
+const wordBusy=computed(()=>loading.value||removing.value||applyingPools.value||add.processing||note.processing||edit.processing);
+function goToWordsPage(target){
+ if(wordBusy.value||target===wordPagination.value.current_page||target<1||target>wordPagination.value.last_page)return;
+ router.get(base.value,collectionWordQuery(target,props.filters.pool_ids,props.shared),wordVisitOptions('page'));
+}
 const poolIds=ref(props.filters.pool_ids?.length?[...props.filters.pool_ids]:props.pools.map(pool=>pool.id));
 const applyingPools=ref(false);
 const add = useForm({ word_ids: [],pool_ids:[...poolIds.value] });
 const poolsDirty=computed(()=>JSON.stringify(poolIds.value.map(String).sort())!==JSON.stringify(add.pool_ids.map(String).sort()));
-function applyPools(){if(!poolIds.value.length||applyingPools.value)return;applyingPools.value=true;add.word_ids=[];const selected=[...poolIds.value];router.get(base.value,{pool_ids:selected},{preserveState:true,preserveScroll:true,onSuccess:()=>{add.pool_ids=selected;add.defaults('pool_ids',selected);},onError:errors=>add.setError(errors),onFinish:()=>{applyingPools.value=false;}});}
+function applyPools(){if(!poolIds.value.length||applyingPools.value)return;applyingPools.value=true;add.word_ids=[];const selected=[...poolIds.value];router.get(base.value,{pool_ids:selected,words_page:wordPagination.value.current_page},{preserveState:true,preserveScroll:true,onSuccess:()=>{add.pool_ids=selected;add.defaults('pool_ids',selected);},onError:errors=>add.setError(errors),onFinish:()=>{applyingPools.value=false;}});}
 const edit = useForm({ title: props.collection.title, description: props.collection.description ?? '',voice_language:props.collection.voice_language??'' });
 const note = useForm({ note: '' }); const noteWord = ref(null);
 const base = computed(() => props.shared ? `/s/${props.collection.share_uuid}` : `/collections/${props.collection.id}`);
 const candidates = computed(() => props.availableWords.filter(w => !visibleWords.value.some(x => x.id === w.id) && `${w.term} ${w.definition}`.toLowerCase().includes(query.value.toLowerCase())));
 const shareUrl = computed(() => typeof window === 'undefined' ? '' : `${window.location.origin}/s/${props.collection.share_uuid}`);
 const totalWords = computed(() => props.collection.words_count ?? props.collection.words.length);
-async function loadMore() {
-    if (loading.value || !nextCursor.value) return;
-    loading.value = true; loadError.value = false;
-    const currentGeneration = generation;
-    requestController = new AbortController();
-    try {
-        const response = await fetch(`${base.value}/words?cursor=${encodeURIComponent(nextCursor.value)}`, {
-            headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: requestController.signal,
-        });
-        if (!response.ok) throw new Error('Unable to load words');
-        const result = await response.json();
-        if (!Array.isArray(result.data)) throw new Error('Invalid word list');
-        if (currentGeneration !== generation) return;
-        const ids = new Set(visibleWords.value.map(w => w.id));
-        for (const word of result.data) { if (!ids.has(word.id)) { visibleWords.value.push(word); ids.add(word.id); } }
-        nextCursor.value = result.next_cursor ?? null;
-    } catch (error) {
-        if (error.name !== 'AbortError' && currentGeneration === generation) loadError.value = true;
-    } finally { if (currentGeneration === generation) loading.value = false; }
-}
 async function copy() {
     try { await navigator.clipboard.writeText(shareUrl.value); copyStatus.value = t('Link copied'); }
     catch { copyStatus.value = t('Select and copy the link below.'); }
@@ -92,7 +79,8 @@ function rotateLink(){
  if(confirm(t('Refresh the sharing link? The old link will stop working immediately. Existing members keep access and blocked accounts stay blocked.')))sharingAction('post',`${base.value}/sharing/rotate`);
 }
 function remove(word) {
-    if (confirm(t('Remove “{term}” from this collection? It stays in your word pool.', { term: word.term }))) router.delete(`${base.value}/words/${word.id}`);
+ if(!owner.value||wordBusy.value)return;
+ if(confirm(t('Remove “{term}” from this collection? It stays in your word pool.',{term:word.term})))router.delete(`${base.value}/words/${word.id}`,{...wordVisitOptions('remove'),data:collectionWordQuery(wordPagination.value.current_page,props.filters.pool_ids,props.shared)});
 }
 function destroy() { if (confirm(t('Delete this collection? Your words will stay in your pool.'))) router.delete(base.value); }
 function editNote(word) { noteWord.value = word; note.note = word.note ?? ''; note.clearErrors(); showNote.value = true; }
@@ -129,10 +117,10 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
         </section>
         <div class="section-heading"><div><h2>{{ t('{count} words to discover', { count: totalWords }) }}</h2><p class="muted small word-order">{{ t('Newest words first') }}</p></div><button v-if="owner" class="button secondary" @click="showAdd = true">{{ t('+ Add from pool') }}</button></div>
         <div class="word-list">
-            <article v-for="word in visibleWords" :key="word.id" class="word-row editable"><div><VocabularyText as="strong" :text="word.term" :direction="word.text_direction"/><VocabularyText as="p" :text="word.definition" :direction="word.text_direction"/><div v-if="!shared && word.note" class="personal-note"><span>{{ t('YOUR NOTE') }}</span>{{ word.note }}</div></div><div v-if="!shared" class="actions"><button class="text-button" @click="editNote(word)">{{ t(word.note ? 'Edit note' : 'Add note') }}</button><button v-if="owner" class="text-button" @click="remove(word)">{{ t('Remove') }}</button></div></article>
+            <article v-for="word in visibleWords" :key="word.id" class="word-row editable"><div><VocabularyText as="strong" :text="word.term" :direction="word.text_direction"/><VocabularyText as="p" :text="word.definition" :direction="word.text_direction"/><div v-if="!shared && word.note" class="personal-note"><span>{{ t('YOUR NOTE') }}</span>{{ word.note }}</div></div><div v-if="!shared" class="actions"><button class="text-button" :disabled="wordBusy" @click="editNote(word)">{{ t(word.note ? 'Edit note' : 'Add note') }}</button><button v-if="owner" class="text-button" :disabled="wordBusy" @click="remove(word)">{{ t('Remove') }}</button></div></article>
             <div v-if="!visibleWords.length" class="empty"><span>▤</span><h3>{{ t('This collection is waiting for words.') }}</h3><p v-if="owner">{{ t('Add words from your pool to start practicing.') }}</p></div>
         </div>
-        <div v-if="nextCursor || loadError" class="load-more"><p v-if="loadError" class="notice error" role="alert">{{ t('Could not load more words. Please try again.') }}</p><button class="button secondary" :disabled="loading" @click="loadMore">{{ t(loading ? 'Loading…' : 'Load more') }}</button><small class="muted">{{ t('Showing {shown} of {total}', { shown: visibleWords.length, total: totalWords }) }}</small></div>
+        <Errors :errors="wordErrors"/><nav class="word-pagination" :aria-label="t('Word pages')" :aria-busy="wordBusy"><p class="muted small" aria-live="polite">{{t('Showing {from}–{to} of {total}',{from:wordPagination.from??0,to:wordPagination.to??0,total:wordPagination.total})}} · {{t('Page {page} of {total}',{page:wordPagination.current_page,total:wordPagination.last_page})}}</p><div class="word-page-buttons"><button type="button" class="button secondary" :disabled="wordBusy||wordPagination.current_page<=1" @click="goToWordsPage(1)">{{t('First page')}}</button><button type="button" class="button secondary" :disabled="wordBusy||wordPagination.current_page<=1" @click="goToWordsPage(wordPagination.current_page-1)">{{t('← Previous')}}</button><button type="button" class="button secondary" :disabled="wordBusy||wordPagination.current_page>=wordPagination.last_page" @click="goToWordsPage(wordPagination.current_page+1)">{{t('Next →')}}</button><button type="button" class="button secondary" :disabled="wordBusy||wordPagination.current_page>=wordPagination.last_page" @click="goToWordsPage(wordPagination.last_page)">{{t('Last page')}}</button></div><span v-if="wordBusy" class="muted small" role="status">{{t('Loading…')}}</span></nav>
         <div v-if="owner" class="form-actions"><button class="text-button danger" @click="destroy">{{ t('Delete collection') }}</button></div>
         <div v-if="showAdd && owner" class="modal-backdrop" @click.self="showAdd = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="add-title"><div class="section-heading"><h2 id="add-title">{{ t('Add from your pool') }}</h2><button class="icon-button" :aria-label="t('Close')" @click="showAdd = false">×</button></div><form @submit.prevent="add.post(`${base}/words`, { onSuccess: () => { showAdd = false; add.reset(); } })"><Errors :errors="add.errors" /><fieldset class="pool-selection"><legend>{{t('Choose source pools')}}</legend><label v-for="pool in pools" :key="pool.id"><input type="checkbox" v-model="poolIds" :value="pool.id"/><span>{{pool.name}} ({{pool.language}})</span></label><button type="button" class="button secondary" :disabled="!poolIds.length||applyingPools" @click="applyPools">{{t('Apply pool selection')}}</button></fieldset><input type="search" v-model="query" :placeholder="t('Find a word…')" :aria-label="t('Find a word')" /><WordPicker :words="candidates" :filter="query" :disabled="add.processing||applyingPools||poolsDirty" v-model="add.word_ids" /><div class="form-actions"><button type="button" class="button secondary" @click="showAdd = false">{{ t('Cancel') }}</button><button class="button" :disabled="!add.word_ids.length || add.processing||applyingPools||poolsDirty">{{ t('Add {count} words', { count: add.word_ids.length }) }}</button></div></form></section></div>
         <div v-if="showEdit && owner" class="modal-backdrop" @click.self="showEdit = false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><h2 id="edit-title">{{ t('Edit collection') }}</h2><form @submit.prevent="edit.put(base, { onSuccess: () => {persistVoice(voiceDraft);showEdit = false;} })"><Errors :errors="edit.errors" /><label>{{t('Default voice language')}}<input v-model="edit.voice_language" list="collection-languages" maxlength="35" placeholder="en-US, pt-PT"/></label><datalist id="collection-languages"><option v-for="language in [...new Set(pools.map(pool=>pool.language))]" :key="language" :value="language"/></datalist><p class="muted small">{{t('This language suggests device voices but never starts speech or replaces your chosen voice.')}}</p><LocalVoicePicker v-model="voiceDraft" :preferred-language="edit.voice_language"/><label>{{ t('Title') }}<input v-model="edit.title" required maxlength="150" /></label><label>{{ t('Description') }}<textarea v-model="edit.description" maxlength="2000" rows="3" /></label><div class="form-actions"><button type="button" class="button secondary" @click="showEdit = false">{{ t('Cancel') }}</button><button class="button" :disabled="edit.processing">{{ t('Save changes') }}</button></div></form></section></div>
@@ -146,4 +134,4 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
 .guest-mode-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}.mode-card .guest-start{min-width:100px}@media(max-width:760px){.guest-mode-grid{grid-template-columns:1fr}}@media(max-width:360px){.mode-card{padding:18px;gap:10px}.mode-card .guest-start{min-width:84px;padding:10px 12px}}
 .sharing-management{display:block}.sharing-management .manage-members-button{display:flex;width:100%;box-sizing:border-box;justify-content:center;margin-top:12px}.sharing-management .sharing-heading{max-width:none;width:100%;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.sharing-switch{flex-shrink:0;margin:0}.sharing-access{display:flex;align-items:flex-end;gap:12px;margin:16px 0}.sharing-access label{flex:1;margin:0}.sharing-access button{flex-shrink:0}.sharing-management .share-link{display:block;width:100%}.share-link-actions{display:flex;justify-content:space-between;gap:12px;margin:12px 0}.sharing-people{border-top:1px solid var(--line,#deded8);margin-top:20px;padding-top:12px}.sharing-person{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0}.sharing-person strong{overflow-wrap:anywhere;min-width:0}.sharing-person .actions{flex-shrink:0}@media(max-width:600px){.sharing-heading{gap:8px}.sharing-heading h3{font-size:1.05rem}.sharing-access,.sharing-person{align-items:stretch;flex-direction:column}.sharing-switch{font-size:.8rem}.share-link-actions .button{flex:1;padding:10px}.sharing-person .actions{justify-content:flex-start}}
 .sharing-switch{position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;cursor:pointer}.sharing-switch input{position:absolute;opacity:0;width:1px;height:1px}.sharing-switch .speech-toggle-track{position:relative;display:inline-block;flex:0 0 42px;width:42px;height:24px;border-radius:20px;background:#a5afad;transition:background .15s}.sharing-switch .speech-toggle-track:after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:white;transition:transform .15s}.sharing-switch input:checked+.speech-toggle-track{background:#157e73}.sharing-switch input:checked+.speech-toggle-track:after{transform:translateX(18px)}.sharing-switch input:focus-visible+.speech-toggle-track{outline:3px solid #163c55;outline-offset:3px}.sharing-switch input:disabled+.speech-toggle-track{opacity:.5}@media(prefers-reduced-motion:reduce){.sharing-switch .speech-toggle-track,.sharing-switch .speech-toggle-track:after{transition:none}}
-.pool-selection{border:1px solid #c6e5d2;padding:14px;border-radius:10px;margin-bottom:16px}.pool-selection label{display:flex;flex-direction:row;align-items:center;gap:10px}.pool-selection input{width:18px;height:18px;flex:0 0 18px;accent-color:var(--teal)}</style>
+.pool-selection{border:1px solid #c6e5d2;padding:14px;border-radius:10px;margin-bottom:16px}.pool-selection label{display:flex;flex-direction:row;align-items:center;gap:10px}.pool-selection input{width:18px;height:18px;flex:0 0 18px;accent-color:var(--teal)}.word-pagination{margin:24px 0}.word-page-buttons{display:flex;flex-wrap:wrap;gap:10px}.word-page-buttons .button{min-height:44px}.word-page-buttons .button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:600px){.word-page-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.word-page-buttons .button{width:100%;padding:12px 8px;white-space:normal}}</style>
