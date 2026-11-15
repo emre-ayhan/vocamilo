@@ -136,4 +136,21 @@ function restart(){if(busy.value||saveState.value==='error')return;saveState.val
 .practice-themed .answer-option:not(.answer-option-correct):not(.answer-option-incorrect) .answer-choice-icon{color:var(--practice-accent)}
 .practice-themed .study-answer-option input:focus-visible+.answer-choice-icon{outline-color:var(--practice-focus)}
 .practice-themed .spoken-question:hover{color:var(--practice-accent)}
+
+/* Keep mode identity across the entire flow without tinting outer panels. */
+.practice-themed .results{background:#fff;border-color:var(--line)}
+.practice-themed .step-label,.practice-themed .text-button,.practice-themed .results h2,.practice-themed .results h3{color:var(--practice-ink)}
+.practice-themed .speech-toggle-track{background:var(--practice-soft);border-color:var(--practice-accent)}
+.practice-themed .speech-toggle-track:after{background:var(--practice-accent);box-shadow:none}
+.practice-themed .speech-toggle input:checked+.speech-toggle-track:after{background:#fff}
+.practice-themed .progress-track{background:var(--practice-soft)}
+.practice-themed .progress-track>div{background:linear-gradient(135deg,var(--practice-accent),var(--practice-end))}
+.practice-themed .answer-option-correct,.practice-themed .answer-feedback.good{background:var(--practice-soft);border-color:var(--practice-accent);color:var(--practice-ink)}
+.practice-themed .answer-option-correct .answer-choice-icon,.practice-themed .result-good{color:var(--practice-accent)}
+.practice-themed .score-circle{border-color:var(--practice-border);color:var(--practice-accent);background:var(--practice-soft)}
+.practice-themed .results .button:not(.secondary){background:linear-gradient(135deg,var(--practice-accent),var(--practice-end));border-color:var(--practice-accent);color:#fff}
+.practice-themed .results .button.secondary{border-color:var(--practice-accent);color:var(--practice-ink)}
+.practice-themed .results .button.secondary:hover{background:var(--practice-soft)}
+.practice-themed .stage-learning,.practice-themed .stage-reinforced{background:var(--practice-soft);border-color:var(--practice-border);color:var(--practice-ink)}
+.practice-themed .text-button:focus-visible,.practice-themed .results .button:focus-visible,.practice-themed .spoken-question:focus-visible{outline:3px solid var(--practice-focus);outline-offset:3px}
 </style>
