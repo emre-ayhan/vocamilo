@@ -302,3 +302,8 @@ Study letter boxes now show provisional correct/incorrect placement colors and i
 For current Study letter scoring, a fully correct composition preview can display the result and Continue before the keyboard ends composition. It remains reversible: changing the draft withdraws/recalculates the candidate and cancelling it discards staged input history. First-letter entries are tracked in a fork of the committed history, so mistakes within a long composition are preserved if that composition is accepted, without permanently scoring cancelled drafts. Continue explicitly finalizes the current candidate once before advancing. Test and historical Study sessions do not expose early completion.
 
 This is a frontend-only change with no migration. Automated long-composition, cancellation and stale-event tests substitute for, but do not establish, physical Android/Gboard verification.
+
+
+### Study keyboard dismissal on completion
+
+For current Study letter scoring, a complete exact answer is finalized before the answer input is blurred to request mobile-keyboard dismissal. This includes long composition drafts: their staged first-entry history is accepted once before blur can trigger composition-end/cancellation events. The result and Continue remain subject to the 80% first-placement rule; completing the corrected word does not erase earlier mistakes or automatically advance. Wrong or incomplete input and Test do not trigger this keyboard dismissal. Browser/OS keyboard behavior still requires physical-device validation.
