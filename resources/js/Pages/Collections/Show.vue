@@ -113,7 +113,6 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
             <p v-if="sharing.access==='guests'" class="notice">{{t('Guest access cannot identify signed-out visitors. A blocked account can still view the collection while signed out. Choose signed-in access to enforce account blocking.')}}</p>
             <div v-if="collection.share_uuid" class="share-link"><input readonly :value="shareUrl" :aria-label="t('Collection share link')" @focus="$event.target.select()"/><div class="share-link-actions"><button type="button" class="button secondary" :disabled="sharingBusy" @click="rotateLink">{{t('Refresh link')}}</button><button type="button" class="button" :disabled="sharingBusy" @click="copy">{{t('Copy link')}}</button></div><small role="status">{{copyStatus}}</small></div>
             <p v-else class="muted small">{{t('Link sharing is off. Enable it to create a new sharing link.')}}</p>
-            <Link class="button secondary manage-members-button" :href="`${base}/sharing/members`">{{t('Manage members')}}</Link>
         </section>
         <div class="section-heading"><div><h2>{{ t('{count} words to discover', { count: totalWords }) }}</h2><p class="muted small word-order">{{ t('Newest words first') }}</p></div><button v-if="owner" class="button secondary" @click="showAdd = true">{{ t('+ Add from pool') }}</button></div>
         <div class="word-list">

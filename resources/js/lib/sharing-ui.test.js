@@ -29,14 +29,12 @@ test('access choice, remove, block, unblock have distinct routes and truthful co
  assert.match(source,/A blocked account can still view the collection while signed out/);
 });
 
-test('member identities are shown only on the separate management page with server search and independent pagination',()=>{
- assert.match(source,/href="`\$\{base\}\/sharing\/members`"/);
+test('member identities move to the central Collections Members tab',()=>{
+ assert.doesNotMatch(source,/href="`\$\{base\}\/sharing\/members`"/);
  assert.doesNotMatch(source,/v-for="person in sharing\.(participants|blocked)/);
- assert.match(members,/router.get\(`\$\{base.value\}\/sharing\/members`,data/);
- assert.match(members,/maxlength="100"/);
- assert.match(members,/page:participants/);assert.match(members,/page:blocked/);
- assert.match(members,/group.page.prev_page_url/);assert.match(members,/group.page.next_page_url/);
- assert.doesNotMatch(members,/v-html/);
+ const index=readFileSync(new URL('../Pages/Collections/Index.vue',import.meta.url),'utf8');
+ assert.match(index,/value:'members',label:'Members'/);
+ assert.match(index,/CollectionMembers v-if="filter==='members'"/);
 });
 test('Read Aloud is compact and includes a decorative speaker icon',()=>{
  const session=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
@@ -44,11 +42,10 @@ test('Read Aloud is compact and includes a decorative speaker icon',()=>{
  assert.match(session,/padding:12px 16px!important;margin-bottom:12px!important/);
 });
 
-test('Manage members is full width on a separate row after refresh and copy',()=>{
- assert.match(source,/class="button secondary manage-members-button"/);
- assert.match(source,/\.sharing-management \.manage-members-button\{display:flex;width:100%;box-sizing:border-box;justify-content:center;margin-top:12px\}/);
- assert.ok(source.indexOf('class="button secondary manage-members-button"')>source.indexOf('@click="copy"'));
- assert.match(source,/<\/div>\s*<p v-else[^>]*>.*<\/p>\s*<Link class="button secondary manage-members-button"/);
+test('collection sharing settings keep link actions without the removed per-collection management button',()=>{
+ assert.doesNotMatch(source,/class="button secondary manage-members-button"/);
+ assert.match(source,/@click="copy"/);
+ assert.match(source,/@click="rotateLink"/);
 });
 
 test('member progress is integrated, server-permitted and read-only with touch-sized actions',()=>{

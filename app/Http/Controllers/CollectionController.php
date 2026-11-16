@@ -6,7 +6,6 @@ use App\Models\Collection;
 use App\Models\StudySession;
 use App\Models\User;
 use App\Support\AdminAudit;
-use App\Support\LiteralSearch;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +16,7 @@ class CollectionController extends Controller
 {
     public function index(Request $r)
     {
-        return Inertia::render('Collections/Index', ['pools' => $r->user()->wordPools()->orderBy('name')->get(['id', 'name', 'language', 'text_direction']), 'collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->when($r->user()->is_admin, fn ($q) => $q->where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhereHas('user', fn ($q) => $q->where('admin_disclosure_version', 1)->whereNotNull('admin_disclosure_accepted_at'))))->withCount('words')->latest()->get()->each(function ($c) use ($r) {
+        return Inertia::render('Collections/Index', [...CollectionMembersController::homeProps($r), 'pools' => $r->user()->wordPools()->orderBy('name')->get(['id', 'name', 'language', 'text_direction']), 'collections' => Collection::where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhere(fn ($q) => $q->whereNotNull('share_uuid')->whereDoesntHave('blockedUsers', fn ($q) => $q->where('users.id', $r->user()->id))->whereHas('members', fn ($q) => $q->where('users.id', $r->user()->id))))->when($r->user()->is_admin, fn ($q) => $q->where(fn ($q) => $q->where('user_id', $r->user()->id)->orWhereHas('user', fn ($q) => $q->where('admin_disclosure_version', 1)->whereNotNull('admin_disclosure_accepted_at'))))->withCount('words')->latest()->get()->each(function ($c) use ($r) {
             if ($r->user()->is_admin) {
                 AdminAudit::record($r->user()->id, 'collection_index_item', $c->id);
             }
@@ -26,7 +25,12 @@ class CollectionController extends Controller
 
     public function store(Request $r)
     {
-        $c = $r->user()->collections()->create($this->data($r));
+        $data = $this->data($r);
+        $c = DB::transaction(function () use ($r, $data) {
+            User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
+
+            return $r->user()->collections()->create($data);
+        });
 
         return redirect('/collections/'.$c->id)->with('success', __('Collection created.'));
     }
@@ -252,28 +256,10 @@ class CollectionController extends Controller
 
     public function sharingMembers(Request $r, int $collection)
     {
-        $c = $this->owned($r, $collection);
-        $filters = $r->validate(['q' => 'nullable|string|max:100', 'participants_page' => 'nullable|integer|min:1', 'blocked_page' => 'nullable|integer|min:1', 'member' => 'nullable|integer|min:1']);
-        $search = trim($filters['q'] ?? '');
-        // Reuse the exact eligibility scope for email matching, selection and row controls.
-        $eligible = $c->members()->when(! $c->share_uuid, fn ($q) => $q->whereRaw('1 = 0'))
-            ->wherePivotNotNull('progress_consented_at')->wherePivot('progress_consent_version', Collection::PROGRESS_CONSENT_VERSION)
-            ->where('users.admin_disclosure_version', 1)->whereNotNull('users.admin_disclosure_accepted_at')->whereNull('users.suspended_at')
-            ->whereNotIn('users.id', $c->blockedUsers()->select('users.id'));
-        $eligibleIds = (clone $eligible)->select('users.id');
-        $participants = $c->members()->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
-            ->whereRaw("LOWER(users.name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)])
-            ->orWhere(fn ($q) => $q->whereIn('users.id', clone $eligibleIds)->whereRaw("LOWER(users.email) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)]))))
-            ->orderByDesc('collection_members.created_at')->orderByDesc('users.id')->paginate(15, ['users.id', 'users.name'], 'participants_page')->withQueryString();
-        $pageEligibleIds = (clone $eligible)->whereIn('users.id', $participants->getCollection()->pluck('id'))->pluck('users.id');
-        $participants->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'joined_at' => $u->pivot->created_at?->toIso8601String(), 'can_view_progress' => $pageEligibleIds->contains($u->id)]);
-        $blocked = $c->blockedUsers()->when($search !== '', fn ($q) => $q->whereRaw("LOWER(users.name) LIKE LOWER(?) ESCAPE '!'", [LiteralSearch::pattern($search)]))
-            ->orderBy('users.name')->orderBy('users.id')->paginate(15, ['users.id', 'users.name'], 'blocked_page')->withQueryString()
-            ->through(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'blocked_at' => $u->pivot->created_at?->toIso8601String()]);
-        $selected = isset($filters['member']) ? (clone $eligible)->where('users.id', $filters['member'])->first(['users.id', 'users.name']) : null;
-        $selectedMember = $selected ? ['id' => $selected->id, 'name' => $selected->name, 'summary' => StudySession::summaryFor($c, $selected->id)] : null;
+        $this->owned($r, $collection);
+        $d = $r->validate(['q' => 'nullable|string|max:100', 'participants_page' => 'nullable|integer|min:1', 'blocked_page' => 'nullable|integer|min:1', 'member' => 'nullable|integer|min:1']);
 
-        return Inertia::render('Collections/Members', ['collection' => $c->only('id', 'title', 'share_uuid'), 'sharing' => $this->sharingData($c), 'participants' => $participants, 'blocked' => $blocked, 'filters' => ['q' => $search], 'selectedMember' => $selectedMember]);
+        return redirect('/collections?'.http_build_query(['tab' => 'members', 'member_collection' => $collection, 'member_q' => trim($d['q'] ?? ''), 'member' => $d['member'] ?? null, 'members_page' => $d['participants_page'] ?? 1]));
     }
 
     private function sharingData(Collection $c): array

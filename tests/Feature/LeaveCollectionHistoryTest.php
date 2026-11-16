@@ -39,11 +39,11 @@ class LeaveCollectionHistoryTest extends TestCase
         $this->assertSame($uuid, $collection->fresh()->share_uuid);
         $this->get($base)->assertNotFound();
         $this->get($base.'/export')->assertNotFound();
-        $this->actingAs($owner)->get($base.'/sharing/members?member='.$member->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
+        $this->actingAs($owner)->get('/collections?tab=members&member_collection='.$collection->id.'&member='.$member->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
         $this->actingAs($member)->postJson('/s/'.$uuid.'/join', ['progress_consent' => true])->assertUnprocessable();
         $this->post('/s/'.$uuid.'/join', ['progress_consent' => true, 'consent_version' => 2])->assertRedirect($base);
         $this->get($base)->assertInertia(fn (Assert $p) => $p->where('summary.total_sessions', 1));
         $this->getJson($base.'/words/'.$word->id.'/note')->assertJsonPath('note', 'MEMBER PRIVATE');
-        $this->actingAs($owner)->get($base.'/sharing/members?member='.$member->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember.summary.total_sessions', 1))->assertDontSee('MEMBER PRIVATE')->assertDontSee('OWNER PRIVATE');
+        $this->actingAs($owner)->get('/collections?tab=members&member_collection='.$collection->id.'&member='.$member->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember.summary.total_sessions', 1))->assertDontSee('MEMBER PRIVATE')->assertDontSee('OWNER PRIVATE');
     }
 }

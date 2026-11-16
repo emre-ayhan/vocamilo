@@ -1,17 +1,21 @@
 <script setup>
+import CollectionMembers from "../../Components/CollectionMembers.vue";
 import LocalVoicePicker from '../../Components/LocalVoicePicker.vue';
 import {voicePreference} from '../../lib/speech-preference.js';
 import { useDialogEscape } from '../../lib/dialog.js';
 import { useI18n } from '../../lib/i18n.js';
-import { computed, ref } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import Errors from '../../Components/Errors.vue';
 const { t } = useI18n();
-const props = defineProps({ pools:{type:Array,default:()=>[]},collections: { type: Array, default: () => [] } });
+const props = defineProps({ pools:{type:Array,default:()=>[]},members:{type:Object,default:()=>({data:[],total:0,current_page:1,last_page:1})},memberFilters:{type:Object,default:()=>({q:''})},selectedMember:{type:Object,default:null},collections: { type: Array, default: () => [] } });
 const page=usePage(),draftVoice=ref('');
 let storage;try{storage=window.localStorage;}catch{}
-const filter = ref('all');
+function readTab(){const query=new URLSearchParams(page.url?.split('?')[1]??'');return props.selectedMember||query.has('member')?'members':['owned','shared','members'].includes(query.get('tab'))?query.get('tab'):'all';}
+const filter=ref(readTab()),memberBusy=ref(false);
+watch(()=>page.url,()=>{filter.value=readTab();});
+function changeTab(value){if(memberBusy.value)return;router.get('/collections',{tab:value},{preserveScroll:true,preserveState:true});}
 const filtered = computed(() => props.collections.filter(c => filter.value === 'all' || (filter.value === 'owned' ? c.isOwner : !c.isOwner)));
 const open = ref(false); const form = useForm({ title: '', description: '',voice_language:'' });
 function save() { form.post('/collections', { onSuccess: response => { if(response.props.collection?.id&&!voicePreference(storage,response.props.collection.id,page.props.auth?.user?.id??'guest').write(draftVoice.value))window.alert(t('Your browser could not save the voice preference. Allow browser storage and try again.'));open.value = false; form.reset();draftVoice.value=''; } }); }
@@ -20,9 +24,9 @@ useDialogEscape(() => { open.value = false; });
 <template>
     <Head :title="t('Collections')" />
     <AppLayout :title="t('A place for every idea.')" :subtitle="t('Gather your words into something worth remembering.')">
-        <template #actions><button class="button" @click="draftVoice='';open = true">{{ t('+ New collection') }}</button></template>
-        <div class="collection-filters" :aria-label="t('Filter collections')"><button v-for="tab in [{ value: 'all', label: 'All collections' }, { value: 'owned', label: 'Created by me' }, { value: 'shared', label: 'Shared with me' }]" :key="tab.value" :class="['button secondary', { selected: filter === tab.value }]" :aria-pressed="filter === tab.value" @click="filter = tab.value">{{ t(tab.label) }}</button></div>
-        <div class="collection-grid">
+        <template #actions><button class="button" :disabled="memberBusy" @click="draftVoice='';open = true">{{ t('+ New collection') }}</button></template>
+        <div class="collection-filters" :aria-label="t('Filter collections')"><button v-for="tab in [{ value: 'all', label: 'All collections' }, { value: 'owned', label: 'Created by me' }, { value: 'shared', label: 'Shared with me' },{value:'members',label:'Members'}]" :key="tab.value" :class="['button secondary', { selected: filter === tab.value }]" :aria-pressed="filter === tab.value" :disabled="memberBusy" @click="changeTab(tab.value)">{{ t(tab.label) }}</button></div>
+        <CollectionMembers v-if="filter==='members'" :members="members" :filters="memberFilters" :selected-member="selectedMember" @busy="memberBusy=$event"/><div v-else class="collection-grid">
             <Link class="collection-card" v-for="(c, i) in filtered" :key="c.id" :href="`/collections/${c.id}`"><div class="collection-icon" :class="`tone-${i % 3}`">▤</div><span class="tiny-label">{{ t(!c.isOwner ? 'SHARED WITH ME' : c.share_uuid ? 'LINK SHARING ON' : 'PRIVATE COLLECTION') }}</span><h3>{{ c.title }}</h3><p>{{ c.description || t('A new world of words.') }}</p><div class="card-bottom"><span>{{ t('{count} words', { count: c.words_count ?? c.words?.length ?? 0 }) }}</span><span>{{ t('Open →') }}</span></div></Link>
             <button v-if="filter !== 'shared'" class="collection-card add-card" @click="draftVoice='';open = true"><span>＋</span><h3>{{ t('Start something new.') }}</h3><p>{{ t('A topic, a lesson, a little curiosity.') }}</p></button>
         </div>

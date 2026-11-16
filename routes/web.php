@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CollectionConsentController;
 use App\Http\Controllers\CollectionController;
+use App\Http\Controllers\CollectionMembersController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\ImportController;
@@ -32,6 +33,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/collections/{collection}/consent', [CollectionConsentController::class, 'show']);
     Route::post('/collections/{collection}/consent', [CollectionConsentController::class, 'accept']);
     Route::delete('/collections/{collection}/membership', [CollectionConsentController::class, 'leave']);
+    Route::post('/collection-members/{user}/preview', [CollectionMembersController::class, 'preview'])->middleware('throttle:60,1');
+    Route::post('/collection-members/{user}/apply', [CollectionMembersController::class, 'apply'])->middleware('throttle:30,1');
     Route::get('/collections/{collection}/progress', [CollectionConsentController::class, 'progress']);
     Route::get('/collections/{collection}/export', [ExportController::class, 'collection']);
     Route::get('/collections/{collection}/words', [CollectionController::class, 'words']);

@@ -465,5 +465,7 @@
     "Choose a letter input mode.": "Escolha um modo de introdução de letras.",
     "Letter-scored answers cannot be self-assessed.": "As respostas avaliadas por letras não podem ser autoavaliadas.",
     "Letter slots are unavailable for this answer.": "As caixas de letras não estão disponíveis para esta resposta.",
-    "Text fallback cannot include letter entries.": "O campo de texto alternativo não pode incluir entradas de letras."
+    "Text fallback cannot include letter entries.": "O campo de texto alternativo não pode incluir entradas de letras.",
+    "Review the current scope and confirm again.": "Reveja o âmbito atual e confirme novamente.",
+    "Member access updated. Private notes and study history have been preserved.": "O acesso do membro foi atualizado. As notas privadas e o histórico de estudo foram preservados."
 }

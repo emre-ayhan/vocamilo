@@ -18,7 +18,7 @@ class SharingMembersPageTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_member_lists_are_separately_paginated_names_only_and_collection_scoped(): void
+    public function test_members_are_deduplicated_paginated_names_only_and_owner_scoped(): void
     {
         $owner = User::factory()->create();
         $c = $owner->collections()->create(['title' => 'Main']);
@@ -28,28 +28,29 @@ class SharingMembersPageTest extends TestCase
             $c->blockedUsers()->attach(User::factory()->create(['name' => sprintf('Blocked %02d', $i)]));
         }
         $other->members()->attach(User::factory()->create(['name' => 'Foreign member']));
-        $url = '/collections/'.$c->id.'/sharing/members';
-        $this->actingAs($owner)->get($url)->assertInertia(fn (Assert $p) => $p->component('Collections/Members')
-            ->has('participants.data', 15)->has('blocked.data', 15)->where('participants.total', 17)->where('blocked.total', 17)
-            ->where('sharing.participants_count', 17)->where('sharing.blocked_count', 17)
-            ->missing('participants.data.0.email')->missing('participants.data.0.pivot')->missing('blocked.data.0.email'));
-        $this->get($url.'?participants_page=2')->assertInertia(fn (Assert $p) => $p->has('participants.data', 2)->where('participants.current_page', 2)->where('blocked.current_page', 1)->has('blocked.data', 15));
-        $this->get($url.'?blocked_page=2')->assertInertia(fn (Assert $p) => $p->has('blocked.data', 2)->where('participants.current_page', 1));
+        $foreign = User::factory()->create()->collections()->create(['title' => 'Foreign']);
+        $foreign->members()->attach(User::factory()->create(['name' => 'Private other-owner member']));
+        $url = '/collections?tab=members';
+        $this->actingAs($owner)->get($url)->assertInertia(fn (Assert $p) => $p->component('Collections/Index')
+            ->has('members.data', 15)->where('members.total', 35)
+            ->missing('members.data.0.email')->missing('members.data.0.pivot'));
+        $this->get($url.'&members_page=2')->assertInertia(fn (Assert $p) => $p->has('members.data', 15)->where('members.current_page', 2));
+        $this->get($url.'&members_page=3')->assertInertia(fn (Assert $p) => $p->has('members.data', 5));
         $this->get('/collections/'.$c->id)->assertInertia(fn (Assert $p) => $p->missing('sharing.participants')->missing('sharing.blocked'));
     }
 
-    public function test_search_filters_both_lists_by_name_and_never_searches_emails(): void
+    public function test_search_matches_names_but_hides_nonconsented_email_matches(): void
     {
         $owner = User::factory()->create();
         $c = $owner->collections()->create(['title' => 'Main']);
         $c->members()->attach(User::factory()->create(['name' => 'Matching learner', 'email' => 'hidden-person@example.com']));
         $c->members()->attach(User::factory()->create(['name' => 'Unrelated']));
         $c->blockedUsers()->attach(User::factory()->create(['name' => 'Matching blocked']));
-        $url = '/collections/'.$c->id.'/sharing/members';
-        $this->actingAs($owner)->get($url.'?q=Matching')->assertInertia(fn (Assert $p) => $p->has('participants.data', 1)->has('blocked.data', 1)->where('filters.q', 'Matching')->where('sharing.participants_count', 2));
-        $this->getJson($url.'?q[]=bad')->assertUnprocessable();
-        $this->getJson($url.'?participants_page=-1')->assertUnprocessable();
-        $this->get($url.'?q=hidden-person')->assertInertia(fn (Assert $p) => $p->has('participants.data', 0)->has('blocked.data', 0));
+        $url = '/collections?tab=members';
+        $this->actingAs($owner)->get($url.'&member_q=Matching')->assertInertia(fn (Assert $p) => $p->has('members.data', 2)->where('memberFilters.q', 'Matching')->where('members.total', 2));
+        $this->getJson($url.'&member_q[]=bad')->assertUnprocessable();
+        $this->getJson($url.'&members_page=-1')->assertUnprocessable();
+        $this->get($url.'&member_q=hidden-person')->assertInertia(fn (Assert $p) => $p->has('members.data', 0));
     }
 
     public function test_guest_member_blocked_and_unrelated_owner_cannot_access_management(): void
@@ -67,7 +68,7 @@ class SharingMembersPageTest extends TestCase
         }
     }
 
-    public function test_newest_join_order_and_only_selected_eligible_member_gets_summary(): void
+    public function test_stable_name_order_and_only_selected_eligible_member_gets_summary(): void
     {
         $owner = User::factory()->create();
         $c = $owner->collections()->create(['title' => 'Main']);
@@ -78,13 +79,13 @@ class SharingMembersPageTest extends TestCase
         foreach ([$old, $new, $tie] as $u) {
             $c->members()->attach($u, ['progress_consented_at' => now(), 'progress_consent_version' => 2, 'created_at' => $u->is($old) ? now()->subDay() : now()]);
         }
-        $url = '/collections/'.$c->id.'/sharing/members';
-        $this->actingAs($owner)->get($url)->assertInertia(fn (Assert $p) => $p->where('participants.data.0.id', $tie->id)->where('participants.data.1.id', $new->id)->where('participants.data.2.id', $old->id)->where('participants.data.0.can_view_progress', true)->missing('participants.data.0.summary')->where('selectedMember', null));
+        $url = '/collections?tab=members';
+        $this->actingAs($owner)->get($url)->assertInertia(fn (Assert $p) => $p->where('members.data.0.id', $new->id)->where('members.data.1.id', $tie->id)->where('members.data.2.id', $old->id)->missing('members.data.0.summary')->where('selectedMember', null));
         // Selection remains valid even when its row is filtered off the visible page.
-        $this->get($url.'?q=A+new&member='.$old->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember.id', $old->id)->where('selectedMember.summary.total_sessions', 0)->missing('selectedMember.email')->missing('selectedMember.note'));
-        $this->getJson($url.'?member[]=1')->assertUnprocessable();
-        $this->getJson($url.'?member=0')->assertUnprocessable();
-        $this->get($url.'?member=999999')->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
+        $this->get($url.'&member_q=A+new&member='.$old->id)->assertInertia(fn (Assert $p) => $p->where('selectedMember.id', $old->id)->where('selectedMember.summary.total_sessions', 0)->missing('selectedMember.email')->missing('selectedMember.note'));
+        $this->getJson($url.'&member[]=1')->assertUnprocessable();
+        $this->getJson($url.'&member=0')->assertUnprocessable();
+        $this->get($url.'&member=999999')->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
     }
 
     public function test_selected_progress_and_email_search_require_every_consent_and_access_condition(): void
@@ -92,7 +93,7 @@ class SharingMembersPageTest extends TestCase
         $owner = User::factory()->create();
         $c = $owner->collections()->create(['title' => 'Main']);
         $c->forceFill(['share_uuid' => (string) Str::uuid()])->save();
-        $url = '/collections/'.$c->id.'/sharing/members';
+        $url = '/collections?tab=members';
         $this->actingAs($owner);
         foreach (['v1', 'missing_date', 'global', 'global_date', 'suspended', 'blocked', 'removed', 'valid'] as $kind) {
             $u = User::factory()->create(['name' => 'Learner '.$kind, 'email' => $kind.'-secret@example.com']);
@@ -112,16 +113,16 @@ class SharingMembersPageTest extends TestCase
             if ($kind === 'removed') {
                 $c->members()->detach($u);
             }
-            $response = $this->get($url.'?q='.$kind.'-secret&member='.$u->id);
-            $response->assertInertia(fn (Assert $p) => $p->has('participants.data', $kind === 'valid' ? 1 : 0)->where('participants.total', $kind === 'valid' ? 1 : 0));
+            $response = $this->get($url.'&member_q='.$kind.'-secret&member='.$u->id);
+            $response->assertInertia(fn (Assert $p) => $p->has('members.data', $kind === 'valid' ? 1 : 0)->where('members.total', $kind === 'valid' ? 1 : 0));
             if ($kind !== 'valid') {
-                $response->assertInertia(fn (Assert $p) => $p->where('selectedMember', null));
+                $response->assertInertia(fn (Assert $p) => $p->where($kind === 'removed' ? 'selectedMember' : 'selectedMember.summary', null));
             } else {
                 $response->assertInertia(fn (Assert $p) => $p->where('selectedMember.id', $u->id)->missing('selectedMember.email'));
             }
         }
         $c->forceFill(['share_uuid' => null])->save();
-        $this->get($url.'?q=valid-secret&member='.$u->id)->assertInertia(fn (Assert $p) => $p->has('participants.data', 0)->where('selectedMember', null));
+        $this->get($url.'&member_q=valid-secret&member='.$u->id)->assertInertia(fn (Assert $p) => $p->has('members.data', 0)->where('selectedMember.summary', null));
     }
 
     public function test_old_progress_url_redirects_only_validated_search_and_page(): void
