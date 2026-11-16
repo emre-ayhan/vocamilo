@@ -1,4 +1,6 @@
 export default {
+  "Skipped answer": "Resposta saltada",
+  "Continue ({count})": "Continuar ({count})",
   "Countdown paused.": "Contagem decrescente em pausa.",
   "Resume countdown": "Retomar contagem decrescente",
   "Pause countdown": "Pausar contagem decrescente",
