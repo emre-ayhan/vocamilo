@@ -1,4 +1,10 @@
 export default {
+  "Countdown paused.": "Contagem decrescente em pausa.",
+  "Resume countdown": "Retomar contagem decrescente",
+  "Pause countdown": "Pausar contagem decrescente",
+  "Correct answer": "Resposta correta",
+  "Continuing in {count} seconds.": "A continuar dentro de {count} segundos.",
+  "Continue now": "Continuar agora",
   "Result preview. Continue confirms this answer; editing it updates the preview.": "Pré-visualização do resultado. Continuar confirma esta resposta; editá-la atualiza a pré-visualização.",
   "Preview: correct placement": "Pré-visualização: posição correta",
   "Preview: incorrect placement": "Pré-visualização: posição incorreta",

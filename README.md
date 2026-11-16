@@ -307,3 +307,9 @@ This is a frontend-only change with no migration. Automated long-composition, ca
 ### Study keyboard dismissal on completion
 
 For current Study letter scoring, a complete exact answer is finalized before the answer input is blurred to request mobile-keyboard dismissal. This includes long composition drafts: their staged first-entry history is accepted once before blur can trigger composition-end/cancellation events. The result and Continue remain subject to the 80% first-placement rule; completing the corrected word does not erase earlier mistakes or automatically advance. Wrong or incomplete input and Test do not trigger this keyboard dismissal. Browser/OS keyboard behavior still requires physical-device validation.
+
+### Study answer playback, focus and skip reveal
+
+With Read Aloud enabled and an available selected local voice, completing a Study arrange-letters answer requests playback of its corrected expected answer once. Test behavior is unchanged. Study written answers request focus on the first empty editable box (or the plain-text fallback); browser/device policies may still prevent a mobile keyboard from opening automatically.
+
+In Study, Skip for now first freezes/discards pending input and reveals the expected answer without recording an answered attempt. Continue now or five seconds of visible-tab time then records the existing blank skipped attempt exactly once. Hiding the tab pauses the countdown; a Pause/Resume control is also available. Navigating to another occurrence, stopping, or unmounting cancels it. Test skip remains immediate and never exposes the expected answer. Timer, focus, synchronous blur/IME and speech request behavior are covered by automated tests; physical Android keyboard and voice behavior have not been verified here.
