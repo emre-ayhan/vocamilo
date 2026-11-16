@@ -16,3 +16,22 @@ test('collection navigation and close retain search/page, reject arbitrary colle
 test('central progress is read-only/consent-gated and member rows never expose email or private notes',()=>{const source=readFileSync(new URL('../Components/CollectionMembers.vue',import.meta.url),'utf8');assert.match(source,/selectedCollection.can_view_progress&&selectedMember.summary/);assert.match(source,/<StudySummary[^>]+read-only/);assert.doesNotMatch(source,/person.email|\.note\b|v-html/);assert.match(source,/min-height:44px/);assert.match(source,/@media\(max-width:760px\)/);});
 
 test('last relation removal focuses member list; unmount releases parent busy state and cancels preview',async()=>{globalThis.window={confirm:()=>true};const view=mount();let focused=0;view.vm.searchInput.value={focus(){focused++;}};view.vm.scope.value='all';await view.vm.manage('block');view.props.selectedMember=null;await view.calls[0].options.onSuccess();assert.equal(focused,1);assert.equal(view.vm.notice.value,'Member access updated.');view.cleanup[0]();assert.deepEqual(view.emissions.at(-1),['busy',false]);});
+
+test('member list is a labelled two-column table with adjacent accessible View actions at mobile widths',()=>{
+ const source=readFileSync(new URL('../Components/CollectionMembers.vue',import.meta.url),'utf8');
+ assert.match(source,/<table v-if="members.data.length" class="members-table"><caption/);
+ assert.match(source,/<thead><tr><th scope="col">/);
+ assert.match(source,/<tbody><tr v-for="person in members.data" :key="person.id"><th scope="row" class="member-name-cell"><bdi dir="auto">/);
+ assert.match(source,/<td class="member-action-cell"><button[\s\S]+?:aria-label="t\('View \{name\}',\{name:person.name\}\)"[^>]+:disabled="busy"[^>]+@click="openMember\(person\)">\{\{t\('View'\)\}\}/);
+ assert.match(source,/table-layout:fixed/);assert.match(source,/member-name-cell\{overflow-wrap:anywhere/);
+ assert.match(source,/member-action-cell\{width:80px/);assert.match(source,/min-width:44px/);
+ assert.doesNotMatch(source,/member-overview-row/);
+});
+test('collection arrows use decorative SVG chevrons with labelled and edge-disabled buttons',()=>{
+ const source=readFileSync(new URL('../Components/CollectionMembers.vue',import.meta.url),'utf8');
+ for(const [step,label,edge] of [[-1,'Previous collection','collectionIndex<=0'],[1,'Next collection','collectionIndex>=selectedMember.collections.length-1']]){
+ const button=source.split(`@click="moveCollection(${step})">`)[1]?.split('</button>')[0];
+ assert.match(button,/<svg[^>]+aria-hidden="true" focusable="false"><path/);assert.doesNotMatch(button,/[←→]/);
+ assert.ok(source.includes(`:aria-label="t('${label}')" :disabled="busy||${edge}"`));
+ }
+});

@@ -1,4 +1,8 @@
 export default {
+  "Member name": "Nome do membro",
+  "Action": "Ação",
+  "View": "Ver",
+  "View {name}": "Ver {name}",
   "Member access updated.": "Acesso do membro atualizado.",
   "Choose a collection": "Escolha uma coleção",
   "Choose a collection to view this member’s progress.": "Escolha uma coleção para ver o progresso deste membro.",
