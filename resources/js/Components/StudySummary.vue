@@ -8,7 +8,7 @@ import { useI18n } from "../lib/i18n.js";
 const {t,locale}=useI18n();
 defineProps({ readOnly: {type:Boolean,default:false}, base: { type: String, required: true }, summary: { type: Object, default: () => ({ modes: {}, recent: [], total_sessions: 0 }) } });
 const labels = { flashcards: 'Flashcards', study: 'Study', test: 'Test' };
-function date(value) { return value ? new Date(value).toLocaleString(locale.value==='pt'?'pt-PT':'en-GB') : t('Not yet practiced'); }
+function date(value) { return value ? new Date(value).toLocaleString(({en:'en-GB',pt:'pt-PT',tr:'tr-TR'})[locale.value]) : t('Not yet practiced'); }
 
 </script>
 <template>

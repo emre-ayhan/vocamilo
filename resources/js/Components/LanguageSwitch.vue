@@ -6,7 +6,7 @@ const {locale,t} = useI18n();
 const busy=ref(false);
 function change(value){if(busy.value||locale.value===value)return;busy.value=true;router.post('/locale',{locale:value},{preserveState:true,preserveScroll:true,onFinish:()=>busy.value=false});}
 </script>
-<template><div class="language-switch" role="group" :aria-label="t('Language')"><button v-for="language in ['en','pt']" :key="language" type="button" :aria-pressed="locale===language" :disabled="busy" @click="change(language)">{{language.toUpperCase()}}</button></div></template>
+<template><div class="language-switch" role="group" :aria-label="t('Language')"><button v-for="language in ['en','pt','tr']" :key="language" type="button" :aria-pressed="locale===language" :disabled="busy" @click="change(language)">{{language.toUpperCase()}}</button></div></template>
 <style scoped>
 .language-switch{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid #aec0c7;border-radius:9px;background:#122c3b;flex-shrink:0;box-shadow:inset 0 1px 2px #18354406}
 .language-switch button{border:0;border-radius:6px;background:transparent;padding:6px 8px;min-width:32px;min-height:28px;color:#eaf4ed;font-size:11px;font-weight:800;line-height:1;transition:box-shadow .15s,color .15s,background .15s}

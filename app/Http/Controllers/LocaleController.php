@@ -8,7 +8,7 @@ class LocaleController extends Controller
 {
     public function update(Request $request)
     {
-        $data = $request->validate(['locale' => 'required|in:en,pt']);
+        $data = $request->validate(['locale' => 'required|in:en,pt,tr']);
         if ($request->user()) {
             $request->user()->forceFill(['locale' => $data['locale']])->save();
         }

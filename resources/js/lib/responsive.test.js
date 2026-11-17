@@ -28,11 +28,16 @@ test('tablet practice cards use two columns and desktop uses three', () => {
     for (const width of [761, 820, 1024]) for (const selector of ['.mode-grid', '.stats-grid']) assert.equal(columns(selector, width), 'repeat(2,minmax(0,1fr))');
     assert.equal(columns('.mode-grid', 1025), 'repeat(3,1fr)');
 });
-test('language switch remains before desktop logout and beside the mobile brand', () => {
+test('account controls share one profile menu on desktop and mobile', () => {
     const layout = readFileSync(new URL('../Layouts/AppLayout.vue', import.meta.url), 'utf8');
-    assert.match(layout, /v-if="!mobile" class="sidebar-language"><LanguageSwitch\/><\/div><Link v-if="page.props.auth\?\.user" href="\/logout"/);
-    assert.match(layout, /class="mobile-toolbar"><LanguageSwitch v-if="mobile"\/>/);
-    assert.match(layout, /mobile-toolbar\{display:flex;align-items:center;gap:8px/);
+    const menu = readFileSync(new URL('../Components/ProfileMenu.vue', import.meta.url), 'utf8');
+    assert.match(layout, /<ProfileMenu v-if="page.props.auth\?\.user"/);
+    assert.doesNotMatch(layout, /<InstallApp|class="logout"|class="mobile-logout"/);
+    assert.match(menu, /href="\/profile"/);
+    assert.match(menu, /<InstallApp\/>/);
+    assert.match(menu, /href="\/logout" method="post"/);
+    assert.match(menu, /bottom:calc\(100% \+ 8px\)/);
+    assert.match(menu, /user.email/);
     assert.match(layout, /:inert="mobile&&drawerOpen\?true:undefined"/);
 });
 test('compact switch uses the actual navy theme and logo lime', () => {
@@ -106,11 +111,15 @@ test('detailed splash stays beside title above word totals',()=>{
 });
 
 
-test('Study note switch shares the speech row and aligns right without changing privacy gates',()=>{
+test('Study note preference is in setup and absent from the active speech controls',()=>{
  const source=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
  const row=source.split('class="study-control-row">')[1].split('</div>')[0];
- assert.match(row,/v-model="speechEnabled"/);assert.match(row,/v-if="canShowNotes"/);assert.match(row,/v-model="showNotes"/);
- assert.match(source,/study-control-row\{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap/);
- assert.match(source,/study-control-row \.study-notes-toggle\{margin-left:auto/);
- assert.match(source,/@media\(max-width:600px\)\{\.study-control-row/);
+ assert.match(row,/v-model="speechEnabled"/);
+ assert.doesNotMatch(row,/showNotes|study-notes-toggle/);
+ const setup=source.split('v-else-if="!started"')[1].split('</form>')[0];
+ assert.match(setup,/v-if="canShowNotes" class="speech-toggle study-notes-toggle"/);
+ assert.match(setup,/v-model="showNotes"/);
+ assert.equal((source.match(/v-model="showNotes"/g)||[]).length,1);
+ assert.match(source,/study-settings \.study-notes-toggle\{margin:1rem 0 1.5rem/);
+ assert.match(source,/canShowNotes=computed\(\(\)=>props.mode==='study'&&!props.shared&&!!page.props.auth\?\.user\?\.id\)/);
 });

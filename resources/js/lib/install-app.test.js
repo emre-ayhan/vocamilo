@@ -19,9 +19,11 @@ test('manifest has standalone same-origin identity and required icon dimensions'
     assert.ok(manifest.icons.some(i=>i.purpose==='maskable'));
 });
 
-test('install button fills sidebar width immediately before footer heading',()=>{
+test('install button is available inside the sidebar profile menu',()=>{
     const layout=readFileSync(new URL('../Layouts/AppLayout.vue',import.meta.url),'utf8');
     const component=readFileSync(new URL('../Components/InstallApp.vue',import.meta.url),'utf8');
-    assert.match(layout,/class="sidebar-bottom"><InstallApp\/><div class="small-label">/);
+    const menu=readFileSync(new URL('../Components/ProfileMenu.vue',import.meta.url),'utf8');
+    assert.match(layout,/class="sidebar-bottom">[\s\S]*<ProfileMenu/);
+    assert.match(menu,/<InstallApp\/>/);
     assert.match(component,/\.install-app \.button\{width:100%/);
 });

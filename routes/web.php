@@ -27,6 +27,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'store'])->middleware('throttle:5,1');
 });
 Route::middleware('auth')->group(function () {
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show']);
+    Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'password'])->middleware('throttle:5,1');
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [VocabularyController::class, 'dashboard']);
     Route::get('/words/export', [ExportController::class, 'pool']);

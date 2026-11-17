@@ -1,4 +1,18 @@
 export default {
+  "Profile": "Perfil",
+  "Account menu": "Menu da conta",
+  "Manage your language and password.": "Gira o seu idioma e palavra-passe.",
+  "Account": "Conta",
+  "Choose the language used throughout Vocamilo.": "Escolha o idioma utilizado no Vocamilo.",
+  "Change password": "Alterar palavra-passe",
+  "Current password": "Palavra-passe atual",
+  "New password": "Nova palavra-passe",
+  "Confirm new password": "Confirmar nova palavra-passe",
+  "Use at least 10 characters.": "Utilize pelo menos 10 caracteres.",
+  "Update password": "Atualizar palavra-passe",
+  "Password updated.": "Palavra-passe atualizada.",
+  "If you signed up with Google and have no Vocamilo password, continue signing in with Google.": "Se criou a conta com o Google e não tem uma palavra-passe do Vocamilo, continue a iniciar sessão com o Google.",
+
   "Open menu": "Abrir menu",
   "Close menu": "Fechar menu",
   "Menu": "Menu",
