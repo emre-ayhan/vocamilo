@@ -1,4 +1,7 @@
 export default {
+"More actions": "Diğer işlemler",
+"Import words": "Kelime içe aktar",
+
   "Profile": "Profil",
   "Account menu": "Hesap menüsü",
   "Manage your language and password.": "Dilinizi ve şifrenizi yönetin.",

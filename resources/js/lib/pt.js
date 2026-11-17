@@ -1,4 +1,7 @@
 export default {
+"More actions": "Mais ações",
+"Import words": "Importar palavras",
+
   "Profile": "Perfil",
   "Account menu": "Menu da conta",
   "Manage your language and password.": "Gira o seu idioma e palavra-passe.",

@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from "../lib/i18n.js";
+import AppIcon from "../Components/AppIcon.vue";
 import ProfileMenu from "../Components/ProfileMenu.vue";
 import LanguageSwitch from "../Components/LanguageSwitch.vue";
 const {t,locale}=useI18n();
@@ -30,9 +31,9 @@ const active=(path)=>page.url.split('?')[0]===path || (path!=='/dashboard' && pa
 <div class="sidebar-brand"><Link :href="shared ? '/' : '/dashboard'" class="brand" @click="closeDrawer"><span class="brand-symbol">v.</span>vocamilo<span class="brand-dot">●</span></Link></div>
 <div class="sidebar-caption">{{t("A LITTLE EVERY DAY")}}</div>
 <nav v-if="!shared && page.props.auth?.user" :aria-label="t('Main navigation')" @click="closeDrawer">
-<Link href="/dashboard" :class="{active:active('/dashboard')}"><span>◫</span> {{t("Overview")}}</Link>
-<Link href="/words" :class="{active:active('/words')||active('/word-pools')}"><span>≋</span> {{t("Word pools")}}</Link>
-<Link href="/collections" :class="{active:active('/collections')}"><span>▤</span> {{t("Collections")}}</Link>
+<Link href="/dashboard" :class="{active:active('/dashboard')}"><AppIcon name="overview"/> {{t("Overview")}}</Link>
+<Link href="/words" :class="{active:active('/words')||active('/word-pools')}"><AppIcon name="words"/> {{t("Word pools")}}</Link>
+<Link href="/collections" :class="{active:active('/collections')}"><AppIcon/> {{t("Collections")}}</Link>
 <Link v-if="page.props.auth?.user?.is_admin" href="/admin/users" :class="{active:active('/admin')}"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4 6v6c0 4 8 9 8 9s8-5 8-9V6l-8-3Z"/><path d="m8 12 3 3 5-6"/></svg>{{t("Administration")}}</Link></nav>
 <div v-else class="sidebar-public"><span class="pill">{{t("SHARED COLLECTION")}}</span><p>{{t("A good word is worth sharing.")}}</p><Link href="/register" class="button secondary">{{t("Create your own space")}}</Link></div>
 <div class="sidebar-bottom"><div class="small-label">{{t("MAKE ROOM FOR NEW WORDS.")}}</div><p>{{t("Learn a little.")}}<br>{{t("Remember a lot.")}}</p><ProfileMenu v-if="page.props.auth?.user" :key="drawerOpen"/><div v-else class="sidebar-language"><LanguageSwitch/></div></div>

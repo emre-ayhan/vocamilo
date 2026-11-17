@@ -90,7 +90,7 @@ test('guest Start is larger and right aligned; Start icons replace long visual a
  }
 });
 
-test('guest and summary share icons; count and gradient circle align in one heading',()=>{
+test('guest and summary share icons; count and percentage badge align in one heading',()=>{
  const show=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
  const summary=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
  assert.match(show,/<ModeIcon :mode="item.mode"/);
@@ -98,16 +98,16 @@ test('guest and summary share icons; count and gradient circle align in one head
  assert.match(summary,/mode-title-group/);
  assert.match(summary,/class="mode-completed"/);
  assert.match(summary,/class="mode-metrics"/);
- assert.match(summary,/class="percentage-splash"/);
+ assert.match(summary,/class="mode-percentage"/);
  assert.match(summary,/collection_word_count/);
- assert.match(summary,/linearGradient/);
+ assert.match(summary,/background:var\(--mode-accent\)/);
 });
 
-test('detailed splash stays beside title above word totals',()=>{
+test('percentage badge stays beside title above word totals',()=>{
  const s=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
  assert.ok(s.indexOf('class="mode-percentage"')<s.indexOf('class="mode-metrics"'));
- assert.match(s,/stroke-opacity="\.28"/);
- assert.match(s,/<circle cx="92"/);
+ assert.match(s,/border-radius:50%/);
+ assert.doesNotMatch(s,/percentage-splash|linearGradient/);
 });
 
 
