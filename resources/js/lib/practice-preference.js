@@ -24,3 +24,13 @@ export function practicePreference(storage,collection,user,mode,shared=false) {
   write(settings,wordCount){if(!enabled)return false;try{if(!storage)return false;storage.setItem(key,JSON.stringify({version:1,settings:normalizePracticeSettings(settings,wordCount)}));return true;}catch{return false;}},
  };
 }
+
+// Stores only a visibility preference, never note contents. Public scopes cannot read it.
+export function studyNotesPreference(storage,collection,user,mode,shared=false) {
+ const enabled=mode==='study'&&!shared&&user!==null&&user!==undefined&&user!=='guest';
+ const key=`vocamilo:notes:v1:${user}:collection:${collection.id}:study`;
+ return {
+  read(){if(!enabled)return false;try{return storage?.getItem(key)==='true';}catch{return false;}},
+  write(value){if(!enabled||!storage)return false;try{storage.setItem(key,String(value===true));return true;}catch{return false;}},
+ };
+}

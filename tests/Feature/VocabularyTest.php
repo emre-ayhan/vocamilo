@@ -200,13 +200,13 @@ class VocabularyTest extends TestCase
         }
     }
 
-    public function test_study_modes_validate_and_owner_keeps_personal_notes(): void
+    public function test_study_modes_validate_and_owner_notes_are_excluded_from_test(): void
     {
         $owner = User::factory()->create();
         $c = $this->collection($owner);
         $c->words()->attach($this->word($owner));
         foreach (['flashcards', 'study', 'test'] as $mode) {
-            $this->actingAs($owner)->get('/collections/'.$c->id.'/study?mode='.$mode)->assertInertia(fn (Assert $p) => $p->component('Study/Session')->where('mode', $mode)->where('words.0.note', 'PRIVATE_TRANSLATION'));
+            $this->actingAs($owner)->get('/collections/'.$c->id.'/study?mode='.$mode)->assertInertia(fn (Assert $p) => $p->component('Study/Session')->where('mode', $mode)->when($mode === 'test', fn ($p) => $p->missing('words.0.note')->missing('collection.words.0.note'), fn ($p) => $p->where('words.0.note', 'PRIVATE_TRANSLATION')));
         }
         $this->get('/collections/'.$c->id.'/study?mode=invalid')->assertUnprocessable();
     }

@@ -288,7 +288,7 @@ class CollectionController extends Controller
     {
         $mode = $r->query('mode', 'flashcards');
         abort_unless(in_array($mode, ['flashcards', 'study', 'test'], true), 422);
-        $p = $this->payload($c, $shared, $shared ? null : $r->user()->id);
+        $p = $this->payload($c, $shared, $shared || $mode === 'test' ? null : $r->user()->id);
 
         return Inertia::render('Study/Session', ['collection' => $p, 'words' => $p['words'], 'mode' => $mode, 'shared' => $shared, 'settings' => []]);
     }

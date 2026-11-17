@@ -33,3 +33,21 @@ test('session remembers setup changes but never enables speech from saved settin
  assert.match(source,/speechEnabled=ref\(false\)/);
  assert.match(source,/page.props.auth\?\.user\?\.id\?\?'guest',props.mode,props.shared/);
 });
+
+import {studyNotesPreference} from './practice-preference.js';
+test('notes toggle defaults off and persists only authenticated private Study scope without note content',()=>{
+ const local=storage(),pool={id:3,share_uuid:'share'};const pref=studyNotesPreference(local,pool,1,'study');
+ assert.equal(pref.read(),false);assert.equal(pref.write(true),true);assert.equal(pref.read(),true);
+ for(const other of [studyNotesPreference(local,pool,2,'study'),studyNotesPreference(local,{id:4},1,'study'),studyNotesPreference(local,pool,1,'test'),studyNotesPreference(local,pool,1,'flashcards'),studyNotesPreference(local,pool,'guest','study'),studyNotesPreference(local,pool,1,'study',true)])assert.equal(other.read(),false);
+ assert.equal(studyNotesPreference(local,pool,1,'test').write(true),false);
+ assert.equal(studyNotesPreference(undefined,pool,1,'study').write(true),false);
+ assert.equal(studyNotesPreference({getItem(){throw Error();}},pool,1,'study').read(),false);
+ pref.write(false);assert.equal(pref.read(),false);
+});
+test('private Study notes are opt-in and separate from session settings payload',()=>{
+ const source=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+ assert.match(source,/props.mode==='study'&&!props.shared&&!!page.props.auth\?\.user\?\.id/);
+ assert.match(source,/v-if="canShowNotes&&showNotes&&current.note"/);
+ assert.match(source,/v-if="canShowNotes" class="speech-toggle study-notes-toggle"/);
+ assert.doesNotMatch(source,/practiceSettings=computed[^\n]*showNotes/);
+});

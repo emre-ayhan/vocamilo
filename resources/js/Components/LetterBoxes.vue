@@ -1,4 +1,5 @@
 <script setup>
+import {hasArabicScript} from '../lib/vocabulary-typography.js';
 import {isCorrect} from "../lib/study.js";
 import {createFirstEntryTracker} from '../lib/first-letter-entries.js';
 import {ref,computed,nextTick,onMounted,onBeforeUnmount,useId} from 'vue';
@@ -42,7 +43,7 @@ function fallbackEnd(event){fallbackComposing=false;fallbackInput(event);}
 onMounted(()=>{locate();focusFirst();if(globalThis.ResizeObserver&&area.value){observer=new ResizeObserver(locate);observer.observe(area.value);}});onBeforeUnmount(()=>{disposed=true;observer?.disconnect();composition.dispose();});
 </script>
 <template>
-<div class="letter-answer" :class="{'revealed-answer':revealAnswer}">
+<div class="letter-answer" :class="{'revealed-answer':revealAnswer,'arabic-content':hasArabicScript(expected)}">
 <span class="answer-label">{{t(revealAnswer?'Skipped answer':'Your answer')}}</span>
 <template v-if="supported">
 <p v-if="!revealAnswer" :id="descriptionId" class="muted small">{{t('Tap a blank box and type. Given letters stay fixed; spaces and punctuation are already included.')}}</p>
@@ -64,4 +65,5 @@ onMounted(()=>{locate();focusFirst();if(globalThis.ResizeObserver&&area.value){o
 .letter-cell,.letter-cell.separator{flex:0 0 2.75rem;width:2.75rem;max-width:100%;min-width:0;min-height:44px;box-sizing:border-box}.letter-answer{min-width:0;max-width:100%}
 .letter-cell{position:relative}.letter-cell.correct{border:2px solid var(--practice-accent,#17644d);background:var(--practice-soft,#e9f7ef)}.letter-cell.incorrect{border:2px solid #a42f36;background:#fff0f1}.placement-mark{position:absolute;right:1px;bottom:0;font-size:.7rem;font-weight:bold}
 .revealed-answer .letter-cell,.fallback-reveal{background:#fff4df;border:1px solid #a97d31;color:#684812;opacity:1}.revealed-answer .letter-cell.active{outline:none}.fallback-reveal{padding:1rem;border-radius:.5rem;white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:plaintext}.revealed-answer .answer-label{color:#684812}
+.arabic-content .letter-cell{font-size:1.5rem;line-height:1.7;min-height:3.25rem}.arabic-content textarea,.arabic-content .fallback-reveal{font-size:1.4rem;line-height:1.9}@media(min-width:900px){.arabic-content .letter-cell{font-size:1.85rem;min-height:3.75rem}.arabic-content textarea,.arabic-content .fallback-reveal{font-size:1.65rem}}
 </style>

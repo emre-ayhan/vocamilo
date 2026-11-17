@@ -1,4 +1,9 @@
 export default {
+  "Open menu": "Abrir menu",
+  "Close menu": "Fechar menu",
+  "Menu": "Menu",
+  "Show notes": "Mostrar notas",
+  "Your private note": "A sua nota privada",
   "Member name": "Nome do membro",
   "Action": "Ação",
   "View": "Ver",
