@@ -104,3 +104,13 @@ test('detailed splash stays beside title above word totals',()=>{
  assert.match(s,/stroke-opacity="\.28"/);
  assert.match(s,/<circle cx="92"/);
 });
+
+
+test('Study note switch shares the speech row and aligns right without changing privacy gates',()=>{
+ const source=readFileSync(new URL('../Pages/Study/Session.vue',import.meta.url),'utf8');
+ const row=source.split('class="study-control-row">')[1].split('</div>')[0];
+ assert.match(row,/v-model="speechEnabled"/);assert.match(row,/v-if="canShowNotes"/);assert.match(row,/v-model="showNotes"/);
+ assert.match(source,/study-control-row\{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap/);
+ assert.match(source,/study-control-row \.study-notes-toggle\{margin-left:auto/);
+ assert.match(source,/@media\(max-width:600px\)\{\.study-control-row/);
+});
