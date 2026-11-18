@@ -38,3 +38,9 @@
 .collection-filters{display:flex;flex-wrap:nowrap;overflow-x:auto;padding:3px 3px 10px;scroll-padding:3px}
 .collection-filters .button{flex:0 0 auto;white-space:nowrap;padding:10px 14px}
 }
+
+/* Keep the page still while any modal is mounted; let its content scroll. */
+html{scrollbar-gutter:stable}
+html:has(.modal-backdrop),body:has(.modal-backdrop){overflow:hidden;overscroll-behavior:none}
+.modal-backdrop{overscroll-behavior:contain}
+.modal{overscroll-behavior:contain}

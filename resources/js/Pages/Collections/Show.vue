@@ -9,12 +9,34 @@ import StudySummary from '../../Components/StudySummary.vue';
 import WordPicker from '../../Components/WordPicker.vue';
 import { useDialogEscape } from '../../lib/dialog.js';
 import { useI18n } from '../../lib/i18n.js';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import Errors from '../../Components/Errors.vue';
 const { t } = useI18n();
 const page = usePage();
+const actionsMenu = ref(null), actionsTrigger = ref(null);
+function closeActions() { if (actionsMenu.value) actionsMenu.value.open = false; }
+function dismissActions(event) {
+    if (!actionsMenu.value?.contains(event.target)) closeActions();
+}
+function escapeActions(event) {
+    if (event.key === 'Escape' && actionsMenu.value?.open) {
+        event.stopPropagation();
+        closeActions();
+        actionsTrigger.value?.focus();
+    }
+}
+onMounted(() => {
+    document.addEventListener('pointerdown', dismissActions);
+    document.addEventListener('focusin', dismissActions);
+});
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', dismissActions);
+    document.removeEventListener('focusin', dismissActions);
+});
+watch(() => page.url, closeActions);
+
 const props = defineProps({
     sharing: { type: Object, default: () => ({access:'guests',participants_count:0,blocked_count:0}) },
     collection: Object, shared: { type: Boolean, default: false }, isOwner: { type: Boolean, default: false },
@@ -95,7 +117,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
     <Head :title="collection.title" />
     <AppLayout :title="collection.title" :subtitle="collection.description" :shared="shared">
         <template #actions><div class="actions"><button v-if="!shared&&!owner" type="button" class="button secondary" :disabled="leave.processing" @click="leaveCollection">{{t('Leave collection')}}</button><Link v-if="!shared&&!owner" :href="`/collections/${collection.id}/consent`" class="button secondary">{{t('Progress sharing choices')}}</Link>
-            <details class="collection-actions"><summary class="button secondary">{{ t('More actions') }}</summary><div class="collection-actions-menu"><button class="button secondary" @click="openVoice">{{t('Voice settings')}}</button><a v-if="owner" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
+            <details ref="actionsMenu" class="collection-actions" @keydown="escapeActions"><summary ref="actionsTrigger" class="button secondary" :aria-label="t('More actions')" :title="t('More actions')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></summary><div class="collection-actions-menu" @click="closeActions"><button class="button secondary" @click="openVoice">{{t('Voice settings')}}</button><a v-if="owner" :href="`/collections/${collection.id}/export`" class="button secondary">{{ t('Export CSV') }}</a>
             <button v-if="owner" class="button secondary" @click="voiceDraft=voiceMemory.read();showEdit = true">{{ t('Edit collection') }}</button></div></details>
             <span v-if="!owner" class="pill dark">{{ t(shared ? 'SHARED COLLECTION' : 'SHARED WITH ME') }}</span>
         </div></template>
@@ -136,7 +158,7 @@ const modes = [{ mode: 'flashcards', icon: '▱', name: 'Flashcards', text: 'Fli
 .pool-selection{border:1px solid #c6e5d2;padding:14px;border-radius:10px;margin-bottom:16px}.pool-selection label{display:flex;flex-direction:row;align-items:center;gap:10px}.pool-selection input{width:18px;height:18px;flex:0 0 18px;accent-color:var(--teal)}.word-pagination{margin:24px 0}.word-page-buttons{display:flex;flex-wrap:wrap;gap:10px}.word-page-buttons .button{min-height:44px}.word-page-buttons .button:disabled{opacity:.5;cursor:not-allowed}@media(max-width:600px){.word-page-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.word-page-buttons .button{width:100%;padding:12px 8px;white-space:normal}}</style>
 
 <style scoped>
-.collection-actions{position:relative}.collection-actions summary{list-style:none;cursor:pointer;gap:12px}.collection-actions summary::-webkit-details-marker{display:none}.collection-actions summary:after{content:"⌄"}.collection-actions summary:focus-visible{outline:3px solid #45baa8;outline-offset:3px}
+.collection-actions{position:relative;flex-shrink:0}.collection-actions summary{display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer;width:52px;height:52px;min-height:52px;padding:0;border-radius:50%;background:var(--surface);border:1px solid var(--line);color:var(--navy);transition:background .15s,border-color .15s}.collection-actions summary::-webkit-details-marker{display:none}.collection-actions summary svg{display:block;width:28px;height:28px;fill:currentColor}.collection-actions summary:hover,.collection-actions[open] summary{background:#e5f1e9;border-color:var(--teal);color:var(--teal);transform:none}.collection-actions summary:focus-visible{outline:3px solid #45baa8;outline-offset:3px}
 .collection-actions-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:10;display:grid;gap:6px;min-width:220px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}.collection-actions-menu .button{width:100%;justify-content:flex-start;text-align:left;border-color:transparent}
-@media(max-width:760px){.collection-actions{width:100%}.collection-actions-menu{position:static;margin-top:8px;min-width:0;box-shadow:none}}
+@media(max-width:760px){.collection-actions{align-self:flex-end;width:auto}.collection-actions summary{width:52px}.collection-actions-menu{min-width:220px;max-width:calc(100vw - 40px)}}
 </style>
