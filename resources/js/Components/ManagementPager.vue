@@ -1,3 +1,4 @@
 <script setup>
+import ChevronText from './ChevronText.vue';
 import {Link} from '@inertiajs/vue3';import {useI18n} from '../lib/i18n.js';defineProps({page:Object});const {t}=useI18n();
-</script><template><nav v-if="page.last_page>1" class="actions" :aria-label="t('Pages')"><Link v-if="page.prev_page_url" :href="page.prev_page_url" preserve-scroll class="button secondary">{{t('← Previous')}}</Link><span>{{t('Page {page} of {total}',{page:page.current_page,total:page.last_page})}}</span><Link v-if="page.next_page_url" :href="page.next_page_url" preserve-scroll class="button secondary">{{t('Next →')}}</Link></nav></template>
+</script><template><nav v-if="page.last_page>1" class="actions" :aria-label="t('Pages')"><Link v-if="page.prev_page_url" :href="page.prev_page_url" preserve-scroll class="button secondary"><ChevronText :text="t('← Previous')"/></Link><span>{{t('Page {page} of {total}',{page:page.current_page,total:page.last_page})}}</span><Link v-if="page.next_page_url" :href="page.next_page_url" preserve-scroll class="button secondary"><ChevronText :text="t('Next →')"/></Link></nav></template>

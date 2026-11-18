@@ -39,7 +39,7 @@ const active=(path)=>page.url.split('?')[0]===path || (path!=='/dashboard' && pa
 <div class="sidebar-bottom"><div class="small-label">{{t("MAKE ROOM FOR NEW WORDS.")}}</div><p>{{t("Learn a little.")}}<br>{{t("Remember a lot.")}}</p><ProfileMenu v-if="page.props.auth?.user" :key="drawerOpen"/><div v-else class="sidebar-language"><LanguageSwitch/></div></div>
 </aside>
 <main class="main" :inert="mobile&&drawerOpen?true:undefined">
-<div class="mobile-menu-bar"><Link :href="shared?'/' : '/dashboard'" class="brand"><span class="brand-symbol">v.</span>vocamilo</Link><div class="mobile-toolbar"><button type="button" class="menu-trigger" ref="menuTrigger" :aria-label="t('Open menu')" aria-controls="mobile-navigation" :aria-expanded="drawerOpen" @click="drawerOpen=true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div></div><header class="page-heading"><div><div class="eyebrow">{{t("YOUR WORDS, YOUR WAY")}}</div><h1>{{ title }}</h1><p v-if="subtitle" class="muted">{{ subtitle }}</p></div><div class="header-actions"><slot name="actions" /></div></header>
+<div class="mobile-menu-bar"><Link :href="shared?'/' : '/dashboard'" class="brand"><span class="brand-symbol">v.</span>vocamilo</Link><div class="mobile-toolbar"><button type="button" class="menu-trigger" ref="menuTrigger" :aria-label="t('Open menu')" aria-controls="mobile-navigation" :aria-expanded="drawerOpen" @click="drawerOpen=true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div></div><header class="page-heading"><div><div class="eyebrow">{{t("YOUR WORDS, YOUR WAY")}}</div><div class="page-title-row"><h1>{{ title }}</h1><slot name="title-badge" /></div><p v-if="subtitle" class="muted">{{ subtitle }}</p></div><div class="header-actions"><slot name="actions" /></div></header>
 <div v-if="page.props.flash?.success" role="status" class="notice success">{{ page.props.flash.success }}</div>
 <div v-if="page.props.flash?.error" role="alert" class="notice error">{{ page.props.flash.error }}</div>
 <slot />
@@ -48,6 +48,7 @@ const active=(path)=>page.url.split('?')[0]===path || (path!=='/dashboard' && pa
 </template>
 
 <style scoped>
+.page-title-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px}.page-title-row h1{margin:0;min-width:0;overflow-wrap:anywhere}.page-title-row :deep(.pill){flex-shrink:0;max-width:100%}
 .header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.sidebar-brand{display:flex;align-items:center}.sidebar-language{margin-bottom:16px}.nav-icon{width:20px;height:20px;flex-shrink:0}
 .mobile-menu-bar,.drawer-close,.drawer-backdrop{display:none}.sidebar{overflow-y:auto}.app-footer{display:flex;align-items:center;justify-content:space-between;gap:20px}.footer-brand{display:flex;flex-direction:column;gap:6px}.footer-brand strong{font-size:14px}.footer-brand span{font-size:11px;line-height:1.5}.footer-privacy{font-size:12px;padding:12px 0;min-height:44px;display:flex;align-items:center;color:#42635e}
 @media(max-width:760px){

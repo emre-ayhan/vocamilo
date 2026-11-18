@@ -1,4 +1,5 @@
 <script setup>
+import ChevronText from '../../Components/ChevronText.vue';
 import AppIcon from "../../Components/AppIcon.vue";
 import CollectionMembers from "../../Components/CollectionMembers.vue";
 import LocalVoicePicker from '../../Components/LocalVoicePicker.vue';
@@ -28,7 +29,7 @@ useDialogEscape(() => { open.value = false; });
         <template #actions><button class="button" :disabled="memberBusy" @click="draftVoice='';open = true">{{ t('+ New collection') }}</button></template>
         <div class="collection-filters" :aria-label="t('Filter collections')"><button v-for="tab in [{ value: 'all', label: 'All collections' }, { value: 'owned', label: 'Created by me' }, { value: 'shared', label: 'Shared with me' },{value:'members',label:'Members'}]" :key="tab.value" :class="['button secondary', { selected: filter === tab.value }]" :aria-pressed="filter === tab.value" :disabled="memberBusy" @click="changeTab(tab.value)">{{ t(tab.label) }}</button></div>
         <CollectionMembers v-if="filter==='members'" :members="members" :filters="memberFilters" :selected-member="selectedMember" @busy="memberBusy=$event"/><div v-else class="collection-grid">
-            <Link class="collection-card" v-for="(c, i) in filtered" :key="c.id" :href="`/collections/${c.id}`"><div class="collection-icon" :class="`tone-${i % 3}`"><AppIcon/></div><span class="tiny-label">{{ t(!c.isOwner ? 'SHARED WITH ME' : c.share_uuid ? 'LINK SHARING ON' : 'PRIVATE COLLECTION') }}</span><h3>{{ c.title }}</h3><p>{{ c.description || t('A new world of words.') }}</p><div class="card-bottom"><span>{{ t('{count} words', { count: c.words_count ?? c.words?.length ?? 0 }) }}</span><span>{{ t('Open →') }}</span></div></Link>
+            <Link class="collection-card" v-for="(c, i) in filtered" :key="c.id" :href="`/collections/${c.id}`"><div class="collection-icon" :class="`tone-${i % 3}`"><AppIcon/></div><span class="tiny-label">{{ t(!c.isOwner ? 'SHARED WITH ME' : c.share_uuid ? 'LINK SHARING ON' : 'PRIVATE COLLECTION') }}</span><h3>{{ c.title }}</h3><p>{{ c.description || t('A new world of words.') }}</p><div class="card-bottom"><span>{{ t('{count} words', { count: c.words_count ?? c.words?.length ?? 0 }) }}</span><span><ChevronText :text="t('Open →')"/></span></div></Link>
             <button v-if="filter !== 'shared'" class="collection-card add-card" @click="draftVoice='';open = true"><span>＋</span><h3>{{ t('Start something new.') }}</h3><p>{{ t('A topic, a lesson, a little curiosity.') }}</p></button>
         </div>
         <div v-if="filter === 'shared' && !filtered.length" class="empty"><span><AppIcon/></span><h3>{{ t('A little knowledge, shared.') }}</h3><p>{{ t('Open a collection link and join it to find it here.') }}</p></div>

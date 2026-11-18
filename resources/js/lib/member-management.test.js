@@ -24,7 +24,7 @@ test('member list is a labelled two-column table with adjacent accessible View a
  assert.match(source,/<tbody><tr v-for="person in members.data" :key="person.id"><th scope="row" class="member-name-cell"><bdi dir="auto">/);
  assert.match(source,/<td class="member-action-cell"><button[\s\S]+?:aria-label="t\('View \{name\}',\{name:person.name\}\)"[^>]+:disabled="busy"[^>]+@click="openMember\(person\)">\{\{t\('View'\)\}\}/);
  assert.match(source,/table-layout:fixed/);assert.match(source,/member-name-cell\{overflow-wrap:anywhere/);
- assert.match(source,/member-action-cell\{width:80px/);assert.match(source,/min-width:44px/);
+ assert.match(source,/member-action-cell\{width:128px/);assert.match(source,/min-width:44px/);
  assert.doesNotMatch(source,/member-overview-row/);
 });
 test('collection arrows use decorative SVG chevrons with labelled and edge-disabled buttons',()=>{
