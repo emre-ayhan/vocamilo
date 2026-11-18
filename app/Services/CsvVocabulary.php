@@ -6,23 +6,37 @@ use Illuminate\Validation\ValidationException;
 
 class CsvVocabulary
 {
-    public function parse(string $path, int $termColumn = 0, int $definitionColumn = 1, bool $header = true, ?int $noteColumn = 2): array
+    public function parse(string $path, int $termColumn = 0, int $definitionColumn = 1, bool $header = true, ?int $noteColumn = 2, bool $firstRowPoolName = false): array
     {
         $h = fopen($path, 'r');
+        // Remove the BOM before CSV parsing so a quoted first field is recognized.
+        if (fread($h, 3) !== "\xEF\xBB\xBF") {
+            rewind($h);
+        }
         $rows = [];
         $headers = [];
         $line = 0;
+        $poolName = null;
         try {
             while (($row = fgetcsv($h, 0, ',', '"', '')) !== false) {
                 $line++;
                 if ($line === 1) {
                     $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0] ?? '');
-                    if ($header) {
-                        $headers = $row;
+                    if ($firstRowPoolName) {
+                        $poolName = trim($row[0] ?? '');
+                        if (! mb_check_encoding($poolName, 'UTF-8') || $poolName === '' || mb_strlen($poolName) > 150 || collect(array_slice($row, 1))->contains(fn ($value) => trim($value ?? '') !== '')) {
+                            throw ValidationException::withMessages(['file' => __('The first CSV row must contain only a pool name, up to 150 characters.')]);
+                        }
 
                         continue;
                     }
-                }if (count($row) === 1 && trim($row[0] ?? '') === '') {
+                }
+                if ($header && $line === ($firstRowPoolName ? 2 : 1)) {
+                    $headers = $row;
+
+                    continue;
+                }
+                if (count($row) === 1 && trim($row[0] ?? '') === '') {
                     continue;
                 }
                 $term = trim($row[$termColumn] ?? '');
@@ -50,6 +64,6 @@ class CsvVocabulary
             throw ValidationException::withMessages(['file' => __('The CSV contains no words.')]);
         }
 
-        return ['rows' => $rows, 'headers' => $headers];
+        return ['rows' => $rows, 'headers' => $headers, 'pool_name' => $poolName];
     }
 }

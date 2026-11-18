@@ -1,4 +1,11 @@
 export default {
+"Second row contains column headings": "A segunda linha contém os cabeçalhos das colunas",
+"First row contains the new pool name": "A primeira linha contém o nome do novo banco",
+"The first row names a new pool. Column headings, if enabled, are on the second row. The pool is created when you confirm the import.": "A primeira linha dá nome ao novo banco. Se ativados, os cabeçalhos ficam na segunda linha. O banco é criado ao confirmar a importação.",
+"The first CSV row must contain only a pool name, up to 150 characters.": "A primeira linha do CSV deve conter apenas o nome do banco, com até 150 caracteres.",
+"Could not read the CSV file. Choose it again.": "Não foi possível ler o ficheiro CSV. Selecione-o novamente.",
+"My vocabulary": "O meu vocabulário",
+
 "More actions": "Mais ações",
 "Import words": "Importar palavras",
 

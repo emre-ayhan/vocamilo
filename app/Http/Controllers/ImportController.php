@@ -7,6 +7,7 @@ use App\Services\CsvVocabulary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -23,11 +24,15 @@ class ImportController extends Controller
     public function preview(Request $r, CsvVocabulary $csv)
     {
         $r->session()->forget('csv_preview');
-        $d = $r->validate(['pool_id' => 'required|integer', 'file' => 'required|file|max:2048', 'term_column' => 'nullable|integer|min:0|max:49', 'definition_column' => 'nullable|integer|min:0|max:49', 'has_header' => 'nullable|boolean', 'note_column' => 'sometimes|nullable|integer|min:0|max:49']);
+        $d = $r->validate(['pool_id' => [Rule::requiredIf(! $r->boolean('first_row_pool_name')), 'nullable', 'integer'], 'first_row_pool_name' => 'sometimes|boolean', 'new_pool_language' => ['required_if:first_row_pool_name,1,true', 'nullable', 'string', 'max:35', 'regex:/^[a-zA-Z]{2,8}(?:-[a-zA-Z0-9]{1,8})*$/'], 'new_pool_direction' => 'required_if:first_row_pool_name,1,true|nullable|in:ltr,rtl', 'file' => 'required|file|max:2048', 'term_column' => 'nullable|integer|min:0|max:49', 'definition_column' => 'nullable|integer|min:0|max:49', 'has_header' => 'nullable|boolean', 'note_column' => 'sometimes|nullable|integer|min:0|max:49']);
         $noteColumn = array_key_exists('note_column', $d) ? ($d['note_column'] === null ? null : (int) $d['note_column']) : 2;
-        $parsed = $csv->parse($r->file('file')->getRealPath(), (int) ($d['term_column'] ?? 0), (int) ($d['definition_column'] ?? 1), $r->boolean('has_header', true), $noteColumn);
-        [$target, $snapshot] = DB::transaction(function () use ($r, $d) {
+        $parsed = $csv->parse($r->file('file')->getRealPath(), (int) ($d['term_column'] ?? 0), (int) ($d['definition_column'] ?? 1), $r->boolean('has_header', true), $noteColumn, $r->boolean('first_row_pool_name'));
+        $newPool = $r->boolean('first_row_pool_name') ? ['name' => $parsed['pool_name'], 'language' => $d['new_pool_language'], 'text_direction' => $d['new_pool_direction']] : null;
+        [$target, $snapshot] = DB::transaction(function () use ($r, $d, $newPool) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
+            if ($newPool) {
+                return [null, []];
+            }
             $target = $r->user()->wordPools()->findOrFail($d['pool_id']);
 
             return [$target, $this->snapshot($target, $r->user()->id)];
@@ -78,10 +83,10 @@ class ImportController extends Controller
             $rows[] = $row + ['key' => $key, 'action' => $action, 'snapshot' => $word ?: null];
         }
         $previewId = (string) Str::uuid();
-        $r->session()->put('csv_preview', ['preview_id' => $previewId, 'version' => 4, 'pool_id' => $target->id, 'pool_snapshot' => $target->only('id', 'name', 'language', 'text_direction'), 'membership_hash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)), 'user_id' => $r->user()->id, 'rows' => $rows, 'expires_at' => now()->addMinutes(30)->timestamp]);
+        $r->session()->put('csv_preview', ['preview_id' => $previewId, 'version' => 4, 'pool_id' => $target?->id, 'new_pool' => $newPool, 'pool_snapshot' => $target?->only('id', 'name', 'language', 'text_direction'), 'membership_hash' => hash('sha256', json_encode($snapshot, JSON_THROW_ON_ERROR)), 'user_id' => $r->user()->id, 'rows' => $rows, 'expires_at' => now()->addMinutes(30)->timestamp]);
         $display = array_map(fn ($row) => collect($row)->only('term', 'definition', 'note', 'action')->all(), array_slice($rows, 0, 50));
 
-        return Inertia::render('Import/Index', ['selectedPoolId' => $target->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language', 'text_direction']), 'preview' => ['preview_id' => $previewId, 'pool_id' => $target->id, 'rows' => $display, 'total' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'duplicates' => $duplicates, 'warnings' => $warnings, 'headers' => $parsed['headers']], 'collections' => $r->user()->collections()->get(['id', 'title'])]);
+        return Inertia::render('Import/Index', ['selectedPoolId' => $target?->id, 'pools' => $r->user()->wordPools()->get(['id', 'name', 'language', 'text_direction']), 'preview' => ['preview_id' => $previewId, 'pool_id' => $target?->id, 'new_pool' => $newPool, 'rows' => $display, 'total' => count($rows), 'created' => $created, 'updated' => $updated, 'skipped' => $skipped, 'duplicates' => $duplicates, 'warnings' => $warnings, 'headers' => $parsed['headers']], 'collections' => $r->user()->collections()->get(['id', 'title'])]);
     }
 
     private function termKey(string $term): string
@@ -106,11 +111,14 @@ class ImportController extends Controller
         if (isset($d['pool_id']) && (int) $d['pool_id'] !== $preview['pool_id']) {
             throw ValidationException::withMessages(['file' => __('The selected pool changed. Upload the CSV again.')]);
         }
-        $collectionId = DB::transaction(function () use ($r, $preview, $d) {
+        [$collectionId, $poolId] = DB::transaction(function () use ($r, $preview, $d) {
             User::whereKey($r->user()->id)->lockForUpdate()->firstOrFail();
-            $target = $r->user()->wordPools()->whereKey($preview['pool_id'])->lockForUpdate()->firstOrFail();
+            $newPool = $preview['new_pool'] ?? null;
+            $target = $newPool
+                ? $r->user()->wordPools()->create($newPool)
+                : $r->user()->wordPools()->whereKey($preview['pool_id'])->lockForUpdate()->firstOrFail();
             $c = isset($d['collection_id']) ? $r->user()->collections()->whereKey($d['collection_id'])->lockForUpdate()->firstOrFail() : null;
-            if ($target->only('id', 'name', 'language', 'text_direction') !== $preview['pool_snapshot'] || ! hash_equals($preview['membership_hash'] ?? '', hash('sha256', json_encode($this->snapshot($target, $r->user()->id), JSON_THROW_ON_ERROR)))) {
+            if (! $newPool && ($target->only('id', 'name', 'language', 'text_direction') !== $preview['pool_snapshot'] || ! hash_equals($preview['membership_hash'] ?? '', hash('sha256', json_encode($this->snapshot($target, $r->user()->id), JSON_THROW_ON_ERROR))))) {
                 throw ValidationException::withMessages(['file' => __('Your word pool changed after preview. Upload the CSV again before importing.')]);
             }
             $pool = $target->words()->where('words.user_id', $r->user()->id)->get()->keyBy('id');
@@ -132,10 +140,10 @@ class ImportController extends Controller
                 }
             }
 
-            return $c?->id;
+            return [$c?->id, $target->id];
         });
         $r->session()->forget('csv_preview');
 
-        return redirect($collectionId ? '/collections/'.$collectionId : '/word-pools/'.$preview['pool_id'])->with('success', __('CSV import completed.'));
+        return redirect($collectionId ? '/collections/'.$collectionId : '/word-pools/'.$poolId)->with('success', __('CSV import completed.'));
     }
 }

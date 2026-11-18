@@ -1,4 +1,11 @@
 export default {
+"Second row contains column headings": "İkinci satır sütun başlıklarını içeriyor",
+"First row contains the new pool name": "İlk satır yeni havuzun adını içeriyor",
+"The first row names a new pool. Column headings, if enabled, are on the second row. The pool is created when you confirm the import.": "İlk satır yeni havuzun adıdır. Sütun başlıkları seçiliyse ikinci satırda olmalıdır. Havuz, içe aktarmayı onayladığınızda oluşturulur.",
+"The first CSV row must contain only a pool name, up to 150 characters.": "CSV dosyasının ilk satırı yalnızca en fazla 150 karakterlik bir havuz adı içermelidir.",
+"Could not read the CSV file. Choose it again.": "CSV dosyası okunamadı. Dosyayı yeniden seçin.",
+"My vocabulary": "Kelimelerim",
+
 "More actions": "Diğer işlemler",
 "Import words": "Kelime içe aktar",
 
