@@ -99,14 +99,17 @@ test('guest and summary share icons; count and percentage badge align in one hea
  assert.match(summary,/class="mode-metrics"/);
  assert.match(summary,/class="mode-percentage"/);
  assert.match(summary,/collection_word_count/);
- assert.match(summary,/background:var\(--mode-accent\)/);
+ assert.match(summary,/class="percentage-splash"/);
+ assert.match(summary,/linearGradient/);
 });
 
-test('percentage badge stays beside title above word totals',()=>{
+test('detailed gradient splash stays beside title above word totals',()=>{
  const s=readFileSync(new URL('../Components/StudySummary.vue',import.meta.url),'utf8');
  assert.ok(s.indexOf('class="mode-percentage"')<s.indexOf('class="mode-metrics"'));
- assert.match(s,/border-radius:50%/);
- assert.doesNotMatch(s,/percentage-splash|linearGradient/);
+ assert.match(s,/stroke-opacity="\.28"/);
+ assert.match(s,/<circle cx="92"/);
+ assert.match(s,/const gradientId = useId\(\)/);
+ assert.doesNotMatch(s,/border-radius:50%|background:var\(--mode-accent\)/);
 });
 
 
@@ -121,4 +124,11 @@ test('Study note preference is in setup and absent from the active speech contro
  assert.equal((source.match(/v-model="showNotes"/g)||[]).length,1);
  assert.match(source,/study-settings \.study-notes-toggle\{margin:1rem 0 1.5rem/);
  assert.match(source,/canShowNotes=computed\(\(\)=>props.mode==='study'&&!props.shared&&!!page.props.auth\?\.user\?\.id\)/);
+});
+
+// Icon-only controls must remain square despite full-width mobile header buttons.
+test('collection action trigger cannot stretch into a mobile ellipse', () => {
+ const source=readFileSync(new URL('../Pages/Collections/Show.vue',import.meta.url),'utf8');
+ assert.match(source,/class="button secondary collection-actions-trigger"/);
+ assert.match(source,/\.collection-actions > \.collection-actions-trigger\{box-sizing:border-box;flex:none;min-width:52px;max-width:52px;aspect-ratio:1;/);
 });
