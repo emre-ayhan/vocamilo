@@ -10,7 +10,7 @@ import FlashcardNote from "../../Components/FlashcardNote.vue";
 import StartIcon from "../../Components/StartIcon.vue";
 import { swipeMark } from '../../lib/flashcard-swipe.js';
 import { collectionVoicePreference } from '../../lib/speech-preference.js';
-import { createStudyQueue,appendStudyRepeat,studyAttemptPayload,prioritizeGuestWords,completedGuestMastery,selectGuestStudyQuestions } from '../../lib/study-queue.js';
+import { createStudyQueue,appendStudyRepeat,prepareStudyTurn,studyAttemptPayload,prioritizeGuestWords,completedGuestMastery,selectGuestStudyQuestions } from '../../lib/study-queue.js';
 import { postSession, sessionAnswers } from '../../lib/session-api.js';
 import { useI18n } from '../../lib/i18n.js';
 import { computed,ref,nextTick,onMounted,onBeforeUnmount,watch } from 'vue';
@@ -86,10 +86,11 @@ async function start(retry=false){
  clearTimeout(transitionTimer);transitionLocked.value=false;busy.value=true;sessionError.value='';
  try {
   const ids=[...new Set(wrong.value.map(r=>r.id))];
-  if(props.shared){rulesVersion.value=props.mode==='study'?7:props.mode==='flashcards'?3:5;let source=retry?props.words.filter(w=>ids.includes(w.id)):props.words;if(props.mode==='study'&&!retry){const ordered=createQuestions(source,{...practiceSettings.value,count:source.length});const preferred=prioritizeGuestWords(ordered,guestLearned);questions.value=selectGuestStudyQuestions(preferred,guestStages,options.value.count,guestCompletedRounds);}else questions.value=createQuestions(source,{...practiceSettings.value,count:retry?source.length:options.value.count});sessionId.value=null;}
+  if(props.shared){rulesVersion.value=props.mode==='study'?8:props.mode==='flashcards'?3:5;let source=retry?props.words.filter(w=>ids.includes(w.id)):props.words;if(props.mode==='study'&&!retry){const ordered=createQuestions(source,{...practiceSettings.value,count:source.length});const preferred=prioritizeGuestWords(ordered,guestLearned);questions.value=selectGuestStudyQuestions(preferred,guestStages,options.value.count,guestCompletedRounds);}else questions.value=createQuestions(source,{...practiceSettings.value,count:retry?source.length:options.value.count});sessionId.value=null;}
   else {const data=await postSession(`${base.value}/sessions`,{mode:props.mode,settings:{...practiceSettings.value,count:retry?ids.length:options.value.count},...(retry?{word_ids:ids}:{}),practice_round:retry});questions.value=data.questions;sessionId.value=data.id;rulesVersion.value=data.rules_version??3;}
   if(props.shared&&props.mode==='study')questions.value=questions.value.map(question=>({...question,type:answerTypes.value.length===1&&answerTypes.value[0]==='choice'?'choice':question.type,letter_layout:localLetterLayout(question.expected),prior_stage:guestStages.get(question.id)?.stage??'new',prior_qualified:guestStages.get(question.id)?.qualified??false,retry_type:answerTypes.value.includes('written')?'written':question.type}));
   if(props.mode!=='flashcards')questions.value=createStudyQueue(questions.value);
+  if(props.mode==='study'&&rulesVersion.value>=8)questions.value=prepareStudyTurn(questions.value,0);
   attempts.value=[];mastery.value=[];stopped.value=false;index.value=0;results.value=[];started.value=true;finished.value=false;practiceRound.value=retry;saveState.value='';reset();
  }catch(error){sessionError.value=t(error.message);}finally{busy.value=false;}
 }
@@ -114,6 +115,7 @@ function next(mark=correct.value){
   if(result.attempt_no===1)results.value.push(result);
   const first=results.value.find(item=>item.id===result.id);
   questions.value=appendStudyRepeat(questions.value,current.value,mark,!first.correct,rulesVersion.value,props.mode,skipped.value);
+  if(props.mode==='study'&&rulesVersion.value>=8)questions.value=prepareStudyTurn(questions.value,index.value+1);
   if(result.attempt_no===1&&!(props.shared&&props.mode==='study'&&rulesVersion.value>=4)){if(mark)guestLearned.add(result.id);else guestLearned.delete(result.id);}
  }else results.value.push(result);
  if(index.value===questions.value.length-1){finished.value=true;if(props.shared&&props.mode==='study'&&rulesVersion.value>=4){mastery.value=completedGuestMastery(attempts.value);guestCompletedRounds++;for(const item of mastery.value){guestStages.set(item.word_id,{stage:item.stage,qualified:item.qualified,last_review:guestCompletedRounds});if(item.qualified)guestLearned.add(item.word_id);else guestLearned.delete(item.word_id);}}save();return;}

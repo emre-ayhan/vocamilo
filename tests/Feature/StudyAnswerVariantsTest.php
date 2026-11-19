@@ -22,7 +22,7 @@ class StudyAnswerVariantsTest extends TestCase
         }
         $this->actingAs($u);
         foreach (['study', 'test'] as $mode) {
-            $s = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => $mode, 'settings' => ['type' => 'rearrange', 'types' => ['choice', 'written', 'rearrange'], 'direction' => 'term', 'directions' => ['term', 'definition'], 'order' => 'ordered', 'count' => 12]])->assertCreated()->assertJsonPath('rules_version', $mode === 'study' ? 7 : 5)->json();
+            $s = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => $mode, 'settings' => ['type' => 'rearrange', 'types' => ['choice', 'written', 'rearrange'], 'direction' => 'term', 'directions' => ['term', 'definition'], 'order' => 'ordered', 'count' => 12]])->assertCreated()->assertJsonPath('rules_version', $mode === 'study' ? 8 : 5)->json();
             $questions = collect($s['questions']);
             $this->assertCount(12, $questions->pluck('id')->unique());
             $counts = $questions->countBy(fn ($q) => $q['type'].':'.$q['answerKey']);

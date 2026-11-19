@@ -18,7 +18,7 @@ class StudyFirstEntriesTest extends TestCase
         $c = $u->collections()->create(['title' => 'Letters']);
         $c->words()->attach($u->words()->create(['term' => $word, 'definition' => 'Definition'])->id);
         $this->actingAs($u);
-        $s = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study', 'settings' => ['type' => $type, 'direction' => 'term', 'order' => 'ordered', 'count' => 1]])->assertCreated()->assertJsonPath('rules_version', 7)->json();
+        $s = $this->postJson('/collections/'.$c->id.'/sessions', ['mode' => 'study', 'settings' => ['type' => $type, 'direction' => 'term', 'order' => 'ordered', 'count' => 1]])->assertCreated()->assertJsonPath('rules_version', 8)->json();
 
         return [$c, $s, $s['questions'][0]];
     }

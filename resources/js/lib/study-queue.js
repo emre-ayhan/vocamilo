@@ -1,3 +1,4 @@
+import {shuffle} from './study.js';
 // Each occurrence is unique, even when a one-word collection repeats immediately.
 export function createStudyQueue(questions) {
     return questions.map(question => ({ ...question, attempt_no: 1, occurrence_id: `${question.id}:1` }));
@@ -48,4 +49,24 @@ export function selectGuestStudyQuestions(questions,stages,count,completedRounds
  const quota=limit===1?((completedRounds+1)%5===0?1:0):Math.max(1,Math.round(limit*.2));
  const reviewCount=Math.min(review.length,Math.max(quota,limit-fresh.length));
  return [...fresh.slice(0,limit-reviewCount),...review.slice(0,reviewCount)];
+}
+
+// Keep the selected first-round order, and randomize pending repeats and choices.
+export function prepareStudyTurn(queue, nextIndex, random = Math.random) {
+    if (nextIndex >= queue.length) return queue;
+    const done = queue.slice(0, nextIndex);
+    let pending = queue.slice(nextIndex);
+    if (pending.every(question => question.attempt_no > 1)) {
+        pending = shuffle(pending, random);
+        if (pending.length > 1 && pending.every((question, i) => question === queue[nextIndex + i])) pending.push(pending.shift());
+        const other = pending.findIndex(question => question.id !== done.at(-1)?.id);
+        if (other > 0) [pending[0], pending[other]] = [pending[other], pending[0]];
+    }
+    const question = pending[0];
+    if (question.type === 'choice' && question.options?.length > 1) {
+        const choices = shuffle(question.options.map((text, i) => ({text, direction: question.option_directions?.[i] ?? question.text_direction})), random);
+        if (choices.every((choice, i) => choice.text === question.options[i])) choices.push(choices.shift());
+        pending[0] = {...question, options: choices.map(choice => choice.text), option_directions: choices.map(choice => choice.direction)};
+    }
+    return [...done, ...pending];
 }

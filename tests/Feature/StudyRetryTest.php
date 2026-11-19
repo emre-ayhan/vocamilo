@@ -36,9 +36,9 @@ class StudyRetryTest extends TestCase
     {
         $session = $this->postJson('/collections/'.$collection->id.'/sessions', ['mode' => $mode, 'settings' => array_replace(['type' => 'written', 'direction' => 'term', 'order' => 'ordered', 'count' => 3], $settings)])->assertCreated()->json();
         if ($mode === 'study') {
-            $this->assertSame(7, $session['rules_version']);
+            $this->assertSame(8, $session['rules_version']);
             // Existing v2 regression scenarios represent already-open sessions.
-            if ($version < 7) {
+            if ($version < 8) {
                 StudySession::findOrFail($session['id'])->update(['rules_version' => $version]);
                 $session['rules_version'] = $version;
             }

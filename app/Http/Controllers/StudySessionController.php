@@ -103,7 +103,7 @@ class StudySessionController extends Controller
             }
             unset($question);
         }
-        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 7 : ($d['mode'] === 'test' ? 5 : 1)]);
+        $session = StudySession::create(['id' => (string) Str::uuid(), 'user_id' => $r->user()->id, 'collection_id' => $c->id, 'mode' => $d['mode'], 'settings' => $settings, 'practice_round' => $d['practice_round'] ?? false, 'questions' => $questions, 'total_count' => count($questions), 'rules_version' => $d['mode'] === 'study' ? 8 : ($d['mode'] === 'test' ? 5 : 1)]);
         // Notes may be displayed privately, but are not copied into historical data.
         $display = $questions;
         if ($d['mode'] !== 'test') {
@@ -195,6 +195,15 @@ class StudySessionController extends Controller
         foreach ($d['answers'] as $position => $a) {
             if (! isset($queue[$position])) {
                 throw ValidationException::withMessages(['answers' => __('Unexpected extra attempt.')]);
+            }
+            // v8 accepts a different order only among retries that are already due.
+            if ($s->mode === 'study' && $s->rules_version >= 8 && $position >= count($s->questions)) {
+                foreach (array_slice($queue, $position, null, true) as $pendingPosition => $pendingQuestion) {
+                    if ($s->questions[$pendingQuestion]['id'] == $a['word_id']) {
+                        [$queue[$position], $queue[$pendingPosition]] = [$queue[$pendingPosition], $queue[$position]];
+                        break;
+                    }
+                }
             }
             $qi = $queue[$position];
             $q = $s->questions[$qi];
